@@ -40,7 +40,14 @@ INK_TARGET = {
     # watch, overruled the trade: "The time display is not orange enough. It should be like the
     # reference." A device observation is the only measurement taken from the panel, so the wire body
     # is now the reference's own (245,155,30), still 6.2:1 on the glyph core with a 5 px stroke.
-    "INK_TIME": (255, 248, 232),    # the wire: white-hot, warmer than white so it stays a filament
+    # A user-supplied ZOOM of the target wire fixed the ladder exactly, centre to outer:
+    # (f8f7d4, f5e67d, f5e67d, f5e67d) - a cream core inside a yellow wire - with orange rings outside
+    # it, measured off the same zoom (229,147,54) at 1-2 px out and (188,82,34) at 3-4 px. So the wire
+    # is TWO passes (INK_WIRE paints the whole glyph, the eroded NixieTimeHot paints the core over it)
+    # and the three bands are the orange falloff. These are as-seen values: the AMOLED pre-correction
+    # is applied on the way out, exactly as for the baked artwork.
+    "INK_TIME": (0xF8, 0xF7, 0xD4),  # the wire's cream core (eroded glyph, drawn last)
+    "INK_WIRE": (0xF5, 0xE6, 0x7D),  # the wire's yellow body (the whole glyph)
     # The glow is STATIC at the bright baseline (user decision): the ring no longer pulses, so it is
     # stored at the colour the pulse used to reach at its peak. No headroom is needed now that
     # nothing scales it. A 1 px halo around the glyph is most of what the digit's colour IS at this
@@ -53,13 +60,13 @@ INK_TARGET = {
     # L26 / L16 / L12 / L11 - so the digits read as a glowing wire instead of a bright glyph on a
     # washed-out tube. GLOW_RAD2 == GLOW_RAD1 would skip the middle band, and a radius equal to the
     # next one inward is skipped in the same way.
-    "INK_GLOW1": (214, 120, 30),    # innermost band, against the glyph
-    "INK_GLOW2": (85, 22, 6),       # middle band: the reference's bloom at ~1-2 px out
-    "INK_GLOW3": (40, 11, 4),       # outer band: where it fades into the dark glass
+    "INK_GLOW1": (229, 147, 54),    # the orange ring just outside the yellow (measured)
+    "INK_GLOW2": (188, 82, 34),     # next ring out (measured)
+    "INK_GLOW3": (150, 62, 26),     # the fade step into the dark glass
 }
 
 
-RED_SHIFT = 0.10   # how far every ink colour moves toward pure red
+RED_SHIFT = 0.0    # walk the whole ink ladder toward red; 0 ships the user's hex spec exactly
 
 
 def toward_red(colour, k=RED_SHIFT):
@@ -69,7 +76,9 @@ def toward_red(colour, k=RED_SHIFT):
     its core, and shifting only one of them moves the hue of the digit's edge away from its middle.
     Red goes up toward 255 and green/blue come down, so the hue walks toward red instead of merely
     brightening. Measured as-seen: core (242,145,32) at 0.00 -> (246,140,27) at 0.10 -> (247,124,24)
-    at 0.20, i.e. hue 32 -> 31 -> 30 deg against the reference's 35.
+    at 0.20, i.e. hue 32 -> 31 -> 30 deg against the reference's 35. It is 0.00 now: the user then
+    supplied the target ladder as exact hex values for a cream-and-yellow wire, which a red walk would
+    immediately falsify.
     """
     r, g, b = colour
     return (round(r + k * (255 - r)), round(g * (1 - k)), round(b * (1 - k)))
@@ -90,6 +99,7 @@ def main():
 // the panel shows is the target colour in tube_colour.py. Painted outer ring -> inner ring -> core.
 import Toybox.Lang;
 
+const INK_WIRE = 0x{out['INK_WIRE'][0]:02X}{out['INK_WIRE'][1]:02X}{out['INK_WIRE'][2]:02X};
 const INK_TIME = 0x{out['INK_TIME'][0]:02X}{out['INK_TIME'][1]:02X}{out['INK_TIME'][2]:02X};
 const INK_GLOW1 = 0x{out['INK_GLOW1'][0]:02X}{out['INK_GLOW1'][1]:02X}{out['INK_GLOW1'][2]:02X};
 const INK_GLOW2 = 0x{out['INK_GLOW2'][0]:02X}{out['INK_GLOW2'][1]:02X}{out['INK_GLOW2'][2]:02X};

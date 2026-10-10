@@ -41,6 +41,9 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     // be scaled at runtime, so each size the layout needs is its own font resource (sizes in
     // make_fonts.py: ~75/41/37/29/18 px ink after the split-scale enlargement).
     private var _fTime as Graphics.FontType or Null;
+    // The wire's cream core: NixieTimeHot is NixieTime eroded 1 px per side (make_fonts.py), drawn in
+    // INK_TIME over the yellow glyph so the stroke has a pale centre, per the user's zoom.
+    private var _fTimeHot as Graphics.FontType or Null;
     private var _fDay as Graphics.FontType or Null;
     private var _fMid as Graphics.FontType or Null;
     private var _fStep as Graphics.FontType or Null;
@@ -71,6 +74,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         WatchFace.initialize();
         _bg = null;
         _fTime = null;
+        _fTimeHot = null;
         _fDay = null;
         _ringWd = null;
         _ringMo = null;
@@ -93,6 +97,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         // Loading a resource is expensive, so it happens here — never in onUpdate.
         _bg = WatchUi.loadResource(Rez.Drawables.Background) as Graphics.BitmapType;
         _fTime = WatchUi.loadResource(Rez.Fonts.NixieTime) as Graphics.FontType;
+        _fTimeHot = WatchUi.loadResource(Rez.Fonts.NixieTimeHot) as Graphics.FontType;
         _fDay = WatchUi.loadResource(Rez.Fonts.NixieDay) as Graphics.FontType;
         _ringKey = -1;          // force the ring patches to (re)load on the next draw
         _fMid = WatchUi.loadResource(Rez.Fonts.NixieMid) as Graphics.FontType;
@@ -109,6 +114,12 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     //! Custom fonts, falling back to a built-in if a resource failed to load.
     private function fontTime() as Graphics.FontType {
         return (_fTime == null) ? Graphics.FONT_NUMBER_MILD : (_fTime as Graphics.FontType);
+    }
+
+    //! The cream-core font, falling back to the wire font (then the stroke is solid yellow).
+    private function fontTimeHot() as Graphics.FontType {
+        var f = _fTimeHot;
+        return (f == null) ? fontTime() : (f as Graphics.FontType);
     }
 
     private function fontDay() as Graphics.FontType {
@@ -225,15 +236,17 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     //! Two of the bands are redundant when their radii match: a pass whose radius equals the next one
     //! inward only repaints the pixels that pass already covers, so it is skipped.
     private function glowing(dc as Graphics.Dc, x as Number, y as Number,
-                             font as Graphics.FontType, text as String) as Void {
+                             wire as Graphics.FontType, hot as Graphics.FontType,
+                             text as String) as Void {
         if (GLOW_RAD3 > GLOW_RAD2) {
-            drawHalo(dc, x, y, font, text, GLOW_RAD3, INK_GLOW3);
+            drawHalo(dc, x, y, wire, text, GLOW_RAD3, INK_GLOW3);
         }
         if (GLOW_RAD2 > GLOW_RAD1) {
-            drawHalo(dc, x, y, font, text, GLOW_RAD2, INK_GLOW2);
+            drawHalo(dc, x, y, wire, text, GLOW_RAD2, INK_GLOW2);
         }
-        drawHalo(dc, x, y, font, text, GLOW_RAD1, INK_GLOW1);   // the wire's orange rim
-        centred(dc, x, y, font, text, INK_TIME);                // the wire itself: white-hot
+        drawHalo(dc, x, y, wire, text, GLOW_RAD1, INK_GLOW1);    // the orange ring outside the wire
+        centred(dc, x, y, wire, text, INK_WIRE);                 // the wire: full weight, yellow
+        centred(dc, x, y, hot, text, INK_TIME);                  // ...and its cream core on top
     }
 
     //! One square halo ring at `radius`: every offset on the ring, but nothing inside it.
@@ -261,7 +274,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         var clock = System.getClockTime();
         var digits = [clock.hour / 10, clock.hour % 10, clock.min / 10, clock.min % 10];
         for (var i = 0; i < 4; i += 1) {
-            glowing(dc, TIME_X[i], TIME_Y, fontTime(), digits[i].toString());
+            glowing(dc, TIME_X[i], TIME_Y, fontTime(), fontTimeHot(), digits[i].toString());
         }
     }
 

@@ -144,6 +144,11 @@ def px_for_ink(source, ink):
 # wanted heavier than the typeface's own weight.
 t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
                           condense=0.80, source=NIXIE_ONE)          # ~75 px digits, tubes
+# NixieTimeHot: the same glyphs eroded 1 px per side, drawn as the wire's CREAM CORE over the yellow
+# glyph (the user's zoom specifies exactly that: f8f7d4 core, f5e67d body). Erosion happens after the
+# crop, so both fonts share metrics and the core sits concentrically inside the wire.
+h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
+                          condense=0.80, source=NIXIE_ONE, erode=1)
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.
