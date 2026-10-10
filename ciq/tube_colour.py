@@ -31,8 +31,12 @@ INK_TARGET = {
     # orange discharge around it) - NOT the pale peach or the two-ring construction of the earlier
     # builds, which the user rejected as "too pale" and "too much complex shading".
     "INK_TIME": (252, 226, 150),    # core: hot yellow-white
-    "INK_GLOW1": (255, 118, 38),    # the single halo ring, bright orange
-    "INK_GLOW2": (255, 118, 38),    # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
+    # The ring carries the glow pulse (35..120 %, 260 % on a strike), so it is stored at the peak
+    # DIVIDED BY PULSE_MAX: 100 % is (212,98,32) and 120 % lands on the intended (255,118,38). That
+    # headroom is what lets the glow breathe and flash without the hue moving - a ring stored at its
+    # own peak has nowhere to go but yellow (see Discharge.haloColour).
+    "INK_GLOW1": (212, 98, 32),     # the single halo ring at rest; x1.2 = the intended peak
+    "INK_GLOW2": (212, 98, 32),     # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
 }
 
 

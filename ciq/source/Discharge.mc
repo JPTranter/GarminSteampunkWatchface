@@ -120,11 +120,28 @@ class Discharge {
     }
 
     //! A halo colour scaled by this tube's current pulse.
+    //!
+    //! The scale is CAPPED at the value that just reaches 255 in the colour's brightest channel.
+    //! Multiplying the channels and clamping them instead (the first version) shifts the HUE: a
+    //! saturated orange like 0xFF7626 clipped its red and green to 255 when the glow flared, so the
+    //! digit's glow turned yellow exactly when it got boldest (user: "when the number becomes more
+    //! bold, its colour should only change slightly - now it becomes too yellow"). Capping the
+    //! multiplier means the pulse changes brightness only, and the hue cannot drift.
     function haloColour(tube as Number, colour as Number) as Number {
         var p = _pulse[tube];
-        var r = (((colour >> 16) & 0xFF) * p) / 100;
-        var g = (((colour >> 8) & 0xFF) * p) / 100;
-        var b = ((colour & 0xFF) * p) / 100;
+        var r = (colour >> 16) & 0xFF;
+        var g = (colour >> 8) & 0xFF;
+        var b = colour & 0xFF;
+        var mx = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
+        if (mx > 0) {
+            var cap = (255 * 100) / mx;          // % that lands exactly on 255
+            if (p > cap) {
+                p = cap;
+            }
+        }
+        r = (r * p) / 100;
+        g = (g * p) / 100;
+        b = (b * p) / 100;
         r = (r > 255) ? 255 : r;
         g = (g > 255) ? 255 : g;
         b = (b > 255) ? 255 : b;

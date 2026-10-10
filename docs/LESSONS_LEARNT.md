@@ -469,3 +469,16 @@ by `ciq/tube_colour.py` into a generated `.mc` and wired into `make.py assets` �
 correction as the artwork, and lives in a generated file so the two cannot drift. The separator
 (two solid dots in the digits' own ink, no glow ring) is drawn the same way, with its geometry
 generated into `Layout.mc`.
+
+**L61. A brightness pulse must SCALE the colour, never clamp it — clamping shifts the hue.** The
+glow pulse multiplied each channel of the halo ring by 35..260 % and clamped at 255. The ring is a
+saturated orange, so its red was already at 255: every pulse above 100 % clipped red and green
+together and walked the glow toward yellow, worst at the strike flare (measured: 100 % (255,166,60)
+→ 120 % (255,199,72) → 260 % (255,255,156), and the user saw it immediately: "when the number
+becomes more bold, its colour should only change slightly — now it becomes too yellow"). The fix is
+two-part: `Discharge.haloColour` caps the multiplier at 255/max-channel (so it can only brighten up
+to the point where the brightest channel saturates, never past it), and the ring's stored colour
+keeps HEADROOM — it is the intended peak divided by `PULSE_MAX`, so 100 % rests a step below the peak
+and 120 % lands on it. Cost: the resting ring is 17 % dimmer than a ring stored at its own peak, and a
+flare can no longer exceed the peak (it saturates instead). Any pulsing colour needs that headroom
+designed in; a colour stored at its own maximum has nowhere to go but a hue shift.

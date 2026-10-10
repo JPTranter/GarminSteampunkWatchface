@@ -176,9 +176,14 @@ class Discharge:
                    for k in range(len(self.on)))
 
     def halo_colour(self, tube, colour):
+        """Mirror of Discharge.haloColour: the scale is capped at the value that just reaches 255 in
+        the brightest channel, so the pulse changes brightness without shifting the hue."""
         p = self.pulse[tube]
-        r, g, b = (((colour >> s) & 0xFF) * p // 100 for s in (16, 8, 0))
-        return (min(r, 255) << 16) | (min(g, 255) << 8) | min(b, 255)
+        r, g, b = (((colour >> s) & 0xFF) for s in (16, 8, 0))
+        mx = max(r, g, b)
+        if mx:
+            p = min(p, 255 * 100 // mx)
+        return (min(r * p // 100, 255) << 16) | (min(g * p // 100, 255) << 8) | min(b * p // 100, 255)
 
     def clamp_y(self, y):
         return min(max(y, float(self.c["ARC_Y_MIN"])), float(self.c["ARC_Y_MAX"]))
