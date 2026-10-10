@@ -26,18 +26,20 @@ GEN_MC = os.path.join(HERE, "source", "TubeInk.mc")
 
 # Target colours AS SEEN ON THE WATCH (sRGB, before the AMOLED pre-correction).
 INK_TARGET = {
-    # The wire is a single hot cathode: a hot yellow-white core inside ONE bright orange ring.
-    # Measured off the user's reference photograph (core (236,225,139) at luminance 0.87, one soft
-    # orange discharge around it) - NOT the pale peach or the two-ring construction of the earlier
-    # builds, which the user rejected as "too pale" and "too much complex shading".
-    "INK_TIME": (252, 226, 150),    # core: hot yellow-white
+    # The wire is a single hot cathode. Measured off the user's second reference (the AI face render,
+    # a warm amber tube band): core (245,155,30) at hue 35 deg / L 0.63, stroke body (182,102,22) at
+    # hue 30 / L 0.44, the glow spilling into the glass (117,61,11) at hue 28 / L 0.27. The pale
+    # cream core of the blue build read far less saturated than that, so the core moved to the
+    # reference's hot orange - the row rendered at 7.5:1 core-vs-glass against the amber glass, where
+    # the exact reference match measured 6.2:1 and the old pale ink 8.2:1.
+    "INK_TIME": (252, 196, 96),     # core: hot orange-white
     # The glow is STATIC at the bright baseline (user decision): the ring no longer pulses, so it is
     # stored at the colour the pulse used to reach at its peak. No headroom is needed now that
-    # nothing scales it. The ring moved RED (user: "more red" on the device, after the digits proved
-    # hard to read) - a 1 px halo around the glyph is most of what the digit's colour IS at this
-    # size, so the ring, not the pale core, is the colour to push.
-    "INK_GLOW1": (255, 78, 22),     # the single halo ring, at the bright baseline
-    "INK_GLOW2": (255, 78, 22),     # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
+    # nothing scales it. A 1 px halo around the glyph is most of what the digit's colour IS at this
+    # size, so the ring, not the core, is what the digit reads as - it carries the reference's stroke
+    # body colour, one step below the core.
+    "INK_GLOW1": (214, 120, 30),    # the single halo ring, at the bright baseline
+    "INK_GLOW2": (214, 120, 30),    # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
 }
 
 

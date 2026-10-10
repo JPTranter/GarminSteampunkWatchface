@@ -94,10 +94,18 @@ def load_clean_source():
 # brass collars, so the collars, manifold and dials are untouched.
 TUBE_X_SRC = [282.3, 439.8, 579.5, 745.9]
 # The haze the digit throws into the glass, and the specular streak. Both follow the discharge's
-# colour: the tubes lit BLUE while the digits were blue (the tube_colour target set), so these
-# move together with ciq/source/TubeInk.mc - a warm digit inside cool glass clashes visibly.
+# colour: the tubes lit from the digit's own amber, so these move together with ciq/source/TubeInk.mc
+# - a cool digit inside warm glass clashes visibly (and did, the other way round, when both were blue).
 GLASS_HAZE_RGB = (0.62, 0.26, 0.06)
 GLASS_SPEC_RGB = (1.0, 0.94, 0.86)
+# The envelope's own CAST: a per-channel gain applied to the artwork's luminance. It replaced the AI
+# art's gold with a cool blue cast, and the user's reference (a warm amber tube render) then asked for
+# the opposite: the base chroma is what the PANEL re-lights, and the baked haze cannot re-tint the
+# envelope on its own, so "the glass should be amber" is a change to THIS constant. Measured off the
+# reference: lit interior (53,25,6), hue 27-35 deg, against the blue build's (81,91,112) - the amber
+# values below land the lit glass at (116,81,54), hue 26 deg, at the same luminance and darkness.
+GLASS_CAST_RGB = (1.30, 0.74, 0.26)
+GLASS_GAMMA = 1.35               # mid-tone push-down; higher = darker, clearer tube interior
 # The anode grid: real nixie tubes show a hexagonal metal mesh in front of the cathode, and the
 # user's reference photo reads as much by its honeycomb as by its colour. 0 = off. Visibility
 # follows the digit's own haze (MESH_GAIN), so the mesh lights up with the glow instead of being a
@@ -174,7 +182,7 @@ def glass_tubes(src):
     a = np.asarray(src, np.float32) / 255.0
     h, w = a.shape[:2]
     lum = (0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2])[..., None]
-    base = np.power(np.clip(lum * np.array([0.78, 0.95, 1.22], np.float32), 0, 1), 1.35)
+    base = np.power(np.clip(lum * np.array(GLASS_CAST_RGB, np.float32), 0, 1), GLASS_GAMMA)
     yy = np.arange(h, dtype=np.float32)[:, None]
     xx = np.arange(w, dtype=np.float32)[None, :]
     spec = np.zeros((h, w), np.float32)
@@ -277,6 +285,11 @@ ARC_A_SRC = [_unmap(x, y, "top") for x, y in ((54, 7), (129, 7), (200, 7), (43, 
 ARC_B_SRC = [_unmap(x, y, "top") for x, y in ((119, 7), (189, 7), (264, 7), (0, 15), (319, 15))]
 ARC_B_EDGE = [None, None, None, 0, 319]           # channels 3, 4 end ON the screen edge
 ARC_Y_SRC = (_unmap(0, 1, "top")[1], _unmap(0, 21, "top")[1])
+# Side spark emitters (the live crackle in Discharge.mc). Measured ON THE SHIPPING FRAME as the
+# bright core of the spark the artwork already bakes beside the outer tubes - (10, 138) left and
+# (306, 135) right, the top-15 % blue-excess centroids in each side margin - and inverted through the
+# SHIPPING transform (_src_from_screen, not _unmap, which inverts the legacy layout C).
+SPARK_POINTS = [_src_from_screen(10, 138, "top"), _src_from_screen(306, 135, "top")]
 HR_DIAL_SRC = _unmap(29, 274, "bot")              # HR dial face centre
 HR_BAND_SRC = (34 / 0.43, 42 / 0.43)              # gauge band radii, in source px
 DATE_DIAL_SRC = (810, 658)                        # date dial centre (polar-unwrap fit)
@@ -315,6 +328,9 @@ def geometry(lay=SHIP):
     g["ARC_BY"] = [round(p[1]) for p in bx]
     g["ARC_Y_MIN"] = max(0, round(ARC_Y_SRC[0] * lay.st + lay.oy))
     g["ARC_Y_MAX"] = round(ARC_Y_SRC[1] * lay.st + lay.oy)
+    sp = [lay.map(x, y, "top") for x, y in SPARK_POINTS]
+    g["SPARK_X"] = [round(p[0]) for p in sp]
+    g["SPARK_Y"] = [round(p[1]) for p in sp]
     hx, hy = lay.map(*HR_DIAL_SRC, "bot")
     g["HR_CENTRE"] = (hx, hy)
     g["HR_BAND"] = (HR_BAND_SRC[0] * lay.sb, HR_BAND_SRC[1] * lay.sb)
@@ -375,6 +391,11 @@ const ARC_BX = {lst(g["ARC_BX"])};
 const ARC_BY = {lst(g["ARC_BY"])};
 const ARC_Y_MIN = {g["ARC_Y_MIN"]};
 const ARC_Y_MAX = {g["ARC_Y_MAX"]};
+
+// The side sparks' emitters: the tube-side spots the artwork's own blue spark sits on, so the live
+// crackle comes from where the painted one does.
+const SPARK_X = {lst(g["SPARK_X"])};
+const SPARK_Y = {lst(g["SPARK_Y"])};
 """)
 
 if __name__ == "__main__":
