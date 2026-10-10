@@ -8,7 +8,7 @@ not photos.
 Writes:
     docs/images/face.png           hero, 2x, mid-workout heart rate
     docs/images/states.png         three heart rates side by side (rest / workout / peak)
-    docs/images/discharge.gif      arc flicker, glow pulse and a step-belt rollover (1x)
+    docs/images/discharge.gif      arc + side-spark flicker and a step-belt rollover (1x)
     docs/store/screenshot_N.png    320x360 1x device-size screenshots for the store listing
     docs/store/hero.png            640x720, the face alone
     docs/store/hero_1440x720.png   1440x720 store hero banner (title + tagline + face, OFL fonts)

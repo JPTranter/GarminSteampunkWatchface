@@ -5,7 +5,7 @@ tips every time you raise your wrist.**
 
 ![Steampunk Nixie: glowing nixie tubes on a brass machine, arcs cracking between the tube tips](docs/store/hero_1440x720.png)
 
-![Arc flicker and glow pulse](docs/images/discharge.gif)
+![Arc flicker and side sparks](docs/images/discharge.gif)
 
 ![Steampunk Nixie running on a Venu Sq 2 on the wrist](docs/images/wrist-demo.gif)
 
@@ -21,11 +21,12 @@ tips every time you raise your wrist.**
 
 ## Features
 
-- **Nixie-tube time**: thin, wire-like digits (Nixie One) burning hot orange inside glass
-  tubes lined with a honeycomb anode grid. The glow is steady — it does not pulse.
+- **Nixie-tube time**: thin, wire-like digits (Nixie One) burning hot orange inside clear **amber
+  glass** envelopes lined with a honeycomb anode grid. The glow is steady — it does not pulse.
 - **Colon separator**: two lit dots between the hours and the minutes, in the digits' own orange.
-- **Electric arcs** jump between the tube tips for the ~10 s after a wrist raise. The animation
-  runs only while the screen is awake.
+- **Electric arcs and side sparks**: arcs jump between the tube tips and blue-white sparks crackle
+  up the outside of the two outer tubes, for the ~10 s after a wrist raise. The animation runs only
+  while the screen is awake.
 - **Heart-rate gauge**: a band lit up to your current rate. It's cold blue below 60 bpm, turns
   green at 60, then runs yellow → orange → red through **your own zones** from Garmin Connect.
 - **Rolling step counter**: five mechanical drums whose digits sit on belts. When your count

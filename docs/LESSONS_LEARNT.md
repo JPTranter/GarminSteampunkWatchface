@@ -570,3 +570,54 @@ which almost all was waste. What worked:
   which lands on `user-attachments` and renders as a native player. The GIF is made with
   `palettegen`/`paletteuse` (340 px wide, 11 fps, 3.6 s, 160 colours -> 3.0 MB; 280 px/10 fps was
   1.9 MB). ffmpeg's APNG muxer produced 13 MB for the same clip, so it is not the smaller option here.
+**L67. "The tubes look wrong - too much blue" was ONE constant, and the reference that fixed it moved
+the CAST, not the haze.** The envelopes are built by `glass_tubes()` as
+`base = pow(clip(lum * GLASS_CAST_RGB), GLASS_GAMMA)` - a per-channel gain that had replaced the AI
+art's gold with a cool blue cast (0.78, 0.95, 1.22). Measured on the shipping frame (blue-dominant =
+`B - (R+G)/2 > 12`), blue was **4.83 % of the face** and almost all of it was the glass: every tube
+carried a shoulder-highlight cluster at (104,123,154), B-R +40, and the wall rims at (81,91,112),
+B-R +26. The blue sparks, lamps and gauge segment are baked artwork and were never the complaint - a
+per-element attribution (`blue_probe.py`: flood-filled clusters with their own mean colour, not a
+bounding-box average) is what says which element to change.
+
+- **The ladder is what makes the answer one line.** With the cast as a module constant instead of an
+  array literal inside the function, five rows (current / half-blue / neutral / neutral-lighter /
+  warm-neutral) render from in-memory overrides with zero residue: the neutral row dropped the blue
+  pixels to **1.20 %** and left only the artwork's own sparks and the gauge.
+- **Neutral was not the answer - the reference was.** The user's next image was a warm amber tube
+  render, so the shipping cast is now **(1.30, 0.74, 0.26)** at gamma 1.35, landing the lit glass at
+  (116,81,54), hue 26 deg against the reference's measured 27-35. Amber, not grey.
+- **The BASE cast is what the panel re-lights; a warm haze cannot re-tint the envelope.** The haze
+  only covers the region the element's own glow reaches, while the cast moves the whole tube - which
+  is exactly why the glass looked blue while its haze and specular were already warm.
+- **Every axis gets its own measured row.** The second reference moved the INK too, so ink rows
+  carried (core-vs-glass ratio, stroke px) measured on the ERODED glyph core: pale cream ink 8.2:1,
+  the exact reference match 6.2:1, and the shipped row 7.5:1. Matching the glass without matching the
+  ink would have left a pale cream wire inside amber glass; matching the reference exactly would have
+  cost the most contrast - so the shipped core is one step hotter than the reference's own.
+
+**L68. The animated side sparks: emit from the PAINTED element's own core, fly the way the user says,
+and mirror the RNG in the device's exact order.** The user asked for the artwork's blue side sparks to
+be animated.
+
+- **The emitter is a measurement.** It is the bright core of the spark the artwork already paints:
+  the top-15 % blue-excess centroid in each side margin, (10,138) left and (306,135) right, inverted
+  through the **shipping** transform (`_src_from_screen`, never the legacy `_unmap`) and generated
+  into `source/Layout.mc` as `SPARK_X` / `SPARK_Y`. The round-trip proved the transform: the
+  generated constants came back as exactly those screen pixels.
+- **Direction came from the user, and the first prototype had it wrong.** Radiating outward into the
+  screen corner looked nothing like the artwork; the requirement is that the filaments fly **up**
+  beside the tubes - "the emitter on the side where the current blue spark emitter is ... fly off into
+  the area above the emitter beside the tubes". A fan about straight up with a small outward bias
+  (`SPARK_UP -90`, `SPARK_BIAS -13/+13`, spread 32 deg, length 22-70 px) is that sentence.
+- **Reuse the palette of the phenomenon that already exists.** The sparks use the bolts' own
+  bloom/sheath/core (`0x2F6EA8 / 0x7AB6F7 / 0xEAF6FF`), which is also what the reference's sparks
+  measure (core (149,191,233), tips (11,20,37)). A new effect that is the same physical thing as an
+  existing one does not need a new palette.
+- **One animation owner.** The sparks live in `Discharge` with the arcs - one state machine, one
+  timer, one `reset()` path - and the offline mirror in `preview.py` consumes the LCG in exactly the
+  device's order (degree, length, bend, tip jitter, per filament, per pass). A mirror that draws the
+  right thing but consumes randoms in a different order replays *different frames*, and that looks
+  like a tuning bug rather than a mirror bug.
+- **Lifecycle unchanged**: 2 emitters x 10 filaments x 3 pen passes, drawn only while a burst is on,
+  and only while the timer runs (high power, ~10 s after a wrist raise). Nothing animates in low power.

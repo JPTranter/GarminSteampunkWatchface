@@ -20,7 +20,7 @@
 | Five drums | Today's step count, up to 99,999. The digits sit on belts; when the count changes while the screen is awake, each changed digit rolls down into place. |
 | Left gauge | Your current **heart rate**. The band is lit up to your rate in seven equal steps: 40–60 bpm (cold blue), 60 bpm to your zone 1 (green, a normal resting rate), then your five zones (green → yellow → orange → red). Your zones come from Garmin Connect (*User Settings → Heart Rate Zones*). |
 | Right dial | The **day** in the centre. The **weekday** is set into the ring above it and the **month** below, one letter per segment. |
-| Arcs | For about 10 s after you raise your wrist, blue arcs crackle between the tube tips. The tubes' orange glow is steady: nothing on the face pulses or flashes. |
+| Arcs | For about 10 s after you raise your wrist, blue arcs crackle between the tube tips and blue-white sparks crackle up the outside of the two outer tubes. The tubes' orange glow is steady: nothing on the face pulses or flashes. |
 
 When the watch is idle (always-on / low power), the face switches to a small dim time readout.
 The AMOLED would turn the screen off if the full brass artwork stayed lit.
