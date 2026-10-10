@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Belt-and-braces secret scan on the CI side (pre-commit is the local, per-commit gate).
+  # Full history, so a key committed and later deleted is still caught.
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+      - name: Run gitleaks (all history)
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --exit-code 1
+      - name: No signing key or build output is tracked
+        run: |
+          bad=$(git ls-files | grep -iE '(^|/)keys/|\.(pem|der|p12|key|prg|iq)$' || true)
+          if [ -n "$bad" ]; then echo "::error::must not be tracked: $bad"; exit 1; fi
+
+  # The face itself cannot be built here: the Connect IQ SDK is only downloadable through
+  # Garmin's login-gated SDK Manager, and builds must be signed with the developer key, which
+  # never leaves the maintainer's machine. Releases are built locally (ciq/make.py release).
+  # What CI CAN check is that the Python asset pipeline is at least syntactically sound.
+  python:
+    name: Python tooling compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m compileall -q ciq hybrid

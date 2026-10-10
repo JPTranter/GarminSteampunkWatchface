@@ -1,0 +1,69 @@
+# OS / editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Blender / render working files
+*.blend1
+*.blend2
+blender.crash.txt
+
+# Render + measurement logs (the model's own reports are kept, these are scratch)
+log_*.txt
+render*.log
+batch_out.txt
+
+# Regenerable measurement overlays — the scripts and reports that produce them ARE kept,
+# so these can always be rebuilt with grid.py / measure*.py / verify*.py
+measure_overlay.png
+grid_overlay.png
+placement_check.png
+placement_check2.png
+
+# 4x supersampled render intermediates
+*_4x.png
+comp_*.png
+
+# Garmin Connect IQ
+# The developer signing key is a PRIVATE KEY and must never be versioned: it is required for every
+# future update to the app, and it is not recoverable if lost. Keep it on disk, out of git.
+ciq/keys/
+# Build output and generated resource stubs
+ciq/gen/
+*.prg
+*.prg.debug.xml
+
+# Compiler intermediates (monkeyc writes them on every build): ~2,000 changed lines per build
+# and no value in review - they used to be tracked and bloated every diff.
+ciq/external-mir/
+ciq/internal-mir/
+ciq/*.prg.debug.xml
+ciq/__pycache__/
+
+# ---- Secrets / local config (same policy as eClock) ----
+# The Connect IQ developer key is a PRIVATE KEY: ciq/keys/ above, plus belt-and-braces patterns
+# so a key copied anywhere else in the tree is still never committed.
+*.pem
+*.der
+*.p12
+*.pfx
+*.key
+.env
+.env.*
+!.env.example
+secrets.*
+
+# ---- Release / store output (built locally by `ciq/make.py release`, attached to releases) ----
+*.iq
+/release/
+
+# ---- Agent workspace (not project content) ----
+.hermes/

@@ -1,0 +1,336 @@
+"""Offline preview of the watch face — composites the face exactly as `onUpdate` draws it.
+
+WHY: every layout tweak on this face cost a `monkeyc` build plus a simulator push. This renders the
+same frame in a second: the shipping background, the custom bitmap fonts, and the halo glow, using
+the SAME constants the view draws with — `TIME_X`/`TIME_Y`, `INK_*`, `GLOW_RAD*`, `WEEKDAY_Y`, ...
+are parsed straight out of `source/SteampunkNixieView.mc`, so the preview cannot quietly drift from
+the code. The simulator stays the source of truth (this does not reproduce Garmin's blitter
+bit-for-bit); the preview answers "where does the digit land and how big is it" without a build.
+
+Usage:
+    python preview.py                      # 320x360 face, mock data, 2x PNG
+    python preview.py --now                # the real current time
+    python preview.py --sleep              # the low-power burn-in-safe readout
+    python preview.py --out face.png --scale 3
+
+Mock data matches the project's fixed set so renders stay comparable (time 10:09, WED 30 SEP,
+8,342 steps) - except heart rate, 128 bpm by default (--hr N) so the zone gauge shows a fill
+(72, the old mock value, is below zone 1 and lights nothing); the day-of-week/month names are used exactly as Gregorian.info returns them.
+"""
+import argparse
+import datetime
+import os
+import re
+
+from PIL import Image
+
+import device_colour
+import hr_gauge
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SOURCE = os.path.join(HERE, "source", "SteampunkNixieView.mc")
+FONTS = os.path.join(HERE, "resources", "fonts")
+# The SHIPPING bitmap (64-colour, what Rez.Drawables.Background loads). resources/images/ held a
+# stale pre-fix copy with a brown watermark patch, and the preview showed that instead.
+IMAGE = os.path.join(HERE, "resources", "drawables", "background.png")
+
+W, H = 320, 360
+
+
+# ---------------------------------------------------------------- the view's own constants
+def parse_constants(paths=(SOURCE, os.path.join(HERE, "source", "Discharge.mc"),
+                           os.path.join(HERE, "source", "DateRing.mc"),
+                           os.path.join(HERE, "source", "HrGauge.mc"))):
+    """Read every `const NAME = value;` out of the view and the generated/extra .mc files."""
+    if isinstance(paths, str):
+        paths = (paths,)
+    src = "\n".join(open(p, encoding="utf-8").read() for p in paths)
+    consts = {}
+    for name, value in re.findall(r"^const\s+(\w+)\s*=\s*([^;]+);", src, re.M):
+        value = value.split("//")[0].strip()
+        if value.startswith("["):
+            consts[name] = [int(v.strip(), 0) for v in value.strip("[]").split(",")]
+        else:
+            consts[name] = int(value, 0)
+    return consts
+
+
+# ---------------------------------------------------------------- BMFont
+class Font:
+    def __init__(self, name):
+        self.name = name
+        self.atlas = Image.open(os.path.join(FONTS, name + "_0.png")).convert("L")
+        self.glyphs = {}
+        for line in open(os.path.join(FONTS, name + ".fnt"), encoding="utf-8"):
+            if not line.startswith("common") and not line.startswith("char "):
+                continue
+            kv = dict(re.findall(r"(\w+)=(-?\d+)", line))
+            if line.startswith("common"):
+                self.line_height = int(kv["lineHeight"])
+                self.base = int(kv["base"])
+            else:
+                self.glyphs[int(kv["id"])] = (int(kv["x"]), int(kv["y"]), int(kv["width"]),
+                                              int(kv["height"]), int(kv["xadvance"]))
+
+    #! dc.getFontHeight(font) for a custom bitmap font is its line height.
+    def height(self):
+        return self.line_height
+
+    def advance(self, text):
+        return sum(self.glyphs[ord(c)][4] for c in text if ord(c) in self.glyphs)
+
+
+def rgb(colour):
+    """0xRRGGBB -> (r, g, b). PIL reads a bare int colour as 0xBBGGRR, which swapped red and blue
+    in every earlier preview (the blue glow rendered orange, the ivory text blue)."""
+    return ((colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF)
+
+
+def draw_text(canvas, font, text, x, y_top, colour):
+    """dc.drawText(x, y_top, font, text, TEXT_JUSTIFY_CENTER), blended by glyph coverage.
+
+    Two details that cost build cycles on the device: y is the TOP of the line box (not a middle or
+    a baseline), and an anti-aliased custom font's grey atlas is coverage, so the glyph must be
+    alpha-composited — pasting the mask opaquely gives the hard stair-stepped edges the resource
+    compiler's non-antialiased default would have produced.
+    """
+    left = x - font.advance(text) // 2
+    for ch in text:
+        g = font.glyphs.get(ord(ch))
+        if g is None:
+            continue
+        gx, gy, gw, gh, adv = g
+        if ch != " ":
+            mask = font.atlas.crop((gx, gy, gx + gw, gy + gh))
+            canvas.paste(Image.new("RGB", (gw, gh), rgb(colour)), (left, y_top), mask)
+        left += adv
+
+
+def centred(canvas, consts, font, text, x, y, colour):
+    """The view's `centred()`: x,y is the glyph's centre, so shift up by half the font height."""
+    draw_text(canvas, font, text, x, y - font.height() // 2, colour)
+
+
+def ring(canvas, consts, font, text, x, y, radius, colour):
+    for dx in range(-radius, radius + 1):
+        for dy in range(-radius, radius + 1):
+            if -radius < dx < radius and -radius < dy < radius:
+                continue
+            centred(canvas, consts, font, text, x + dx, y + dy, colour)
+
+
+def glowing(canvas, consts, font, text, x, y, tube=0, discharge=None):
+    halo = (lambda c: discharge.halo_colour(tube, c)) if discharge else (lambda c: c)
+    ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], halo(consts["INK_GLOW2"]))
+    ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], halo(consts["INK_GLOW1"]))
+    centred(canvas, consts, font, text, x, y, consts["INK_TIME"])
+
+
+# ---------------------------------------------------------------- the discharge (Discharge.mc)
+class Discharge:
+    """A line-for-line mirror of source/Discharge.mc: the same 31-bit LCG, the same call order,
+    the same state machine and geometry, reading the same constants — so frame N here is frame N
+    on the watch (positions can differ by a fraction of a pixel: Monkey C Float is 32-bit)."""
+
+    def __init__(self, c):
+        self.c = c
+        self.seed = 20261010
+        n = len(c["ARC_AX"])
+        self.timer = [0] * n
+        self.on = [False] * n
+        self.pulse = [100] * 4
+        self.target = [100] * 4
+        self.hold = [0] * 4
+        for k in range(n):
+            self.timer[k] = self.between(1, c["ARC_OFF_MAX"])
+
+    def next(self):
+        self.seed = (self.seed * 1103515245 + 12345) & 0x7FFFFFFF
+        return self.seed >> 16
+
+    def between(self, lo, hi):
+        return lo + self.next() % (hi - lo + 1)
+
+    def step(self):
+        c = self.c
+        for k in range(len(self.timer)):
+            self.timer[k] -= 1
+            if self.timer[k] <= 0:
+                self.on[k] = not self.on[k]
+                self.timer[k] = (self.between(c["ARC_ON_MIN"], c["ARC_ON_MAX"]) if self.on[k]
+                                 else self.between(c["ARC_OFF_MIN"], c["ARC_OFF_MAX"]))
+        for i in range(4):
+            self.hold[i] -= 1
+            if self.hold[i] <= 0:
+                self.target[i] = self.between(c["PULSE_MIN"], c["PULSE_MAX"])
+                self.hold[i] = self.between(c["PULSE_HOLD_MIN"], c["PULSE_HOLD_MAX"])
+            if self.touched(i):
+                self.pulse[i] = c["PULSE_FLARE"]
+            else:
+                self.pulse[i] = (self.pulse[i] * 3 + self.target[i]) // 4
+
+    def touched(self, tube):
+        return any(self.on[k] and (self.c["ARC_TUBE_A"][k] == tube or self.c["ARC_TUBE_B"][k] == tube)
+                   for k in range(len(self.on)))
+
+    def halo_colour(self, tube, colour):
+        p = self.pulse[tube]
+        r, g, b = (((colour >> s) & 0xFF) * p // 100 for s in (16, 8, 0))
+        return (min(r, 255) << 16) | (min(g, 255) << 8) | min(b, 255)
+
+    def clamp_y(self, y):
+        return min(max(y, float(self.c["ARC_Y_MIN"])), float(self.c["ARC_Y_MAX"]))
+
+    def draw(self, canvas):
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(canvas)
+        for k in range(len(self.on)):
+            if self.on[k]:
+                self.draw_arc(d, k)
+
+    def draw_arc(self, d, k):
+        c = self.c
+        xs, ys = [float(c["ARC_AX"][k]), float(c["ARC_BX"][k])], [float(c["ARC_AY"][k]), float(c["ARC_BY"][k])]
+        dx, dy = xs[1] - xs[0], ys[1] - ys[0]
+        ln = (dx * dx + dy * dy) ** 0.5
+        nx, ny = -dy / ln, dx / ln
+        amp = ln * 0.22
+        for _ in range(3):
+            nxs, nys = [xs[0]], [ys[0]]
+            for i in range(len(xs) - 1):
+                off = (self.between(0, 2000) - 1000) * amp / 1000.0
+                nxs.append((xs[i] + xs[i + 1]) / 2.0 + nx * off)
+                nys.append(self.clamp_y((ys[i] + ys[i + 1]) / 2.0 + ny * off))
+                nxs.append(xs[i + 1])
+                nys.append(ys[i + 1])
+            xs, ys = nxs, nys
+            amp /= 2.0
+        tendrils = []
+        for _ in range(c["ARC_TENDRILS"]):
+            j = self.between(2, 6)
+            side = -1.0 if self.between(0, 1) == 0 else 1.0
+            tl = float(self.between(5, 11))
+            kx = xs[j] + nx * side * tl * 0.5 + (self.between(0, 6) - 3)
+            ky = self.clamp_y(ys[j] + ny * side * tl * 0.5)
+            ex = kx + nx * side * tl * 0.5 + (self.between(0, 6) - 3)
+            ey = self.clamp_y(ky + ny * side * tl * 0.5)
+            tendrils.append([(xs[j], ys[j]), (kx, ky), (ex, ey)])
+        for p, (pen, ink) in enumerate(((4, c["ARC_BLOOM"]), (2, c["ARC_SHEATH"]), (1, c["ARC_CORE"]))):
+            col = rgb(ink)
+            d.line(list(zip(xs, ys)), fill=col, width=pen, joint="curve")
+            if p > 0:
+                for t in tendrils:
+                    d.line(t, fill=col, width=pen)
+
+
+# ---------------------------------------------------------------- the frame
+def render(mock=True, sleep=False, consts=None, discharge=None, hr=None):
+    consts = consts or parse_constants()
+    f_time, f_day = Font("NixieTime"), Font("NixieDay")
+    f_mid, f_step = Font("NixieMid"), Font("NixieStep")
+
+    face = Image.open(IMAGE).convert("RGB")
+    assert face.size == (W, H), face.size
+
+    if mock:
+        hh, mm = 10, 9
+        steps = "8342"
+        weekday, day, month = "WED", "30", "SEP"
+    else:
+        now = datetime.datetime.now()
+        hh, mm = now.hour, now.minute
+        steps = "8342"
+        weekday, day, month = now.strftime("%a").upper(), now.strftime("%d"), now.strftime("%b").upper()
+
+    hr = str(hr if hr is not None else 128)   # 128 bpm (zone 2-3) so the gauge shows a fill
+    if sleep:
+        centred(face, consts, f_time, "%02d:%02d" % (hh, mm), 160, 175, consts["INK_SLEEP"])
+        return face
+
+    if discharge is not None:
+        discharge.draw(face)        # as onUpdate: over the background, under every readout
+    for i, d in enumerate("%02d%02d" % (hh, mm)):
+        # The glow is painted back-to-front: far ring, near ring, then the core glyph on top.
+        glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], i, discharge)
+
+    text = (steps.rjust(4))[-4:]
+    for i, ch in enumerate(text):
+        if ch == " ":
+            continue
+        centred(face, consts, f_step, ch, consts["STEP_X"][i], consts["STEP_Y"][i], consts["INK_IVORY"])
+
+    # the zone gauge (variant B): the dim band is in the background; light it up to the rate,
+    # through the same segment rule the view uses (example zones - the watch reads the user's)
+    hr_gauge.draw_lit(face, hr_gauge.fraction(int(hr), consts["HRG_FALLBACK_ZONES"]))
+    centred(face, consts, f_mid, hr, consts["HRG_X"], consts["HR_Y"], consts["INK_IVORY"])
+    # the date ring: the same pre-rendered patches the view blits (make_date_ring.py), at the
+    # offsets in the generated DateRing.mc
+    ring = os.path.join(HERE, "resources", "drawables", "ring")
+    names = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+    months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    face.paste(Image.open(os.path.join(ring, f"wd{names.index(weekday) + 1}.png")).convert("RGB"),
+               (consts["RING_TOP_X"], consts["RING_TOP_Y"]))
+    face.paste(Image.open(os.path.join(ring, f"mo{months.index(month) + 1}.png")).convert("RGB"),
+               (consts["RING_BOT_X"], consts["RING_BOT_Y"]))
+    centred(face, consts, f_day, day, consts["DAY_X"], consts["DAY_Y"], consts["INK_IVORY"])
+    return face
+
+
+DEFAULT_OUT = os.path.join(HERE, "artwork", "face_preview.png")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--scale", type=int, default=2)
+    ap.add_argument("--now", action="store_true", help="real clock instead of the fixed mock time")
+    ap.add_argument("--sleep", action="store_true", help="the low-power readout")
+    ap.add_argument("--hr", type=int, default=None, help="heart rate to show (default 128)")
+    ap.add_argument("--as-seen", action="store_true",
+                    help="undo the AMOLED pre-correction: how the face looks ON the watch, for "
+                         "screenshots (the shipping frame itself looks yellow-green on a monitor)")
+    ap.add_argument("--anim", type=int, metavar="FRAMES", default=0,
+                    help="replay the arc flicker + glow pulse: write an animated GIF and a sheet")
+    args = ap.parse_args()
+
+    consts = parse_constants()
+    if args.anim:
+        dis = Discharge(consts)
+        frames = []
+        for _ in range(args.anim):
+            dis.step()                          # the watch steps, then redraws, every FRAME_MS
+            f = render(mock=not args.now, consts=consts, discharge=dis, hr=args.hr)
+            f = device_colour.as_seen(f) if args.as_seen else f
+            frames.append(f.resize((W * args.scale, H * args.scale), Image.LANCZOS))
+        gif = os.path.join(HERE, "artwork", "anim_preview.gif")
+        # Everything that animates (the arcs and the tube halos) lives in the tube band, y < 150,
+        # so the GIF is that band only - a full-face 80-frame GIF at 2x was 28 MB.
+        band = [fr.crop((0, 0, W * args.scale, 150 * args.scale)) for fr in frames]
+        band[0].save(gif, save_all=True, append_images=band[1:], duration=consts["FRAME_MS"],
+                     loop=0, optimize=True)
+        # contact sheet of the top band (where the arcs live), 8 frames per row, at 2x
+        crop = [fr.crop((0, 0, W * args.scale, 150 * args.scale)) for fr in frames[:24]]
+        cw, ch = crop[0].size
+        sheet = Image.new("RGB", (cw * 4, ch * ((len(crop) + 3) // 4)))
+        for n, im in enumerate(crop):
+            sheet.paste(im, ((n % 4) * cw, (n // 4) * ch))
+        sheet_p = os.path.join(HERE, "artwork", "anim_sheet.png")
+        sheet.save(sheet_p)
+        print(f"{gif}  {len(frames)} frames @ {consts['FRAME_MS']} ms;  sheet {sheet_p}")
+        raise SystemExit(0)
+    face = render(mock=not args.now, sleep=args.sleep, consts=consts, hr=args.hr)
+    face = device_colour.as_seen(face) if args.as_seen else face
+
+    if args.scale > 1:
+        face = face.resize((W * args.scale, H * args.scale), Image.LANCZOS)
+    face.save(args.out)
+
+    print(f"{args.out}  {face.size[0]}x{face.size[1]}")
+    for name, font, y, cols in (("time", "NixieTime", consts["TIME_Y"], 4),
+                                ("heart rate", "NixieMid", consts["HR_Y"], 2),
+                                ("steps", "NixieStep", consts["STEP_Y"][0], 4),
+                                ("day number", "NixieDay", consts["DAY_Y"], 2),
+):
+        f = Font(font)
+        print(f"  {name:11s} {font:11s} ink {f.base:2d} px  centred y {y}  "
+              f"box {y - f.height() // 2}..{y - f.height() // 2 + f.height()}")

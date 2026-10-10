@@ -1,0 +1,397 @@
+# LESSONS LEARNT — Steampunk watch face (Garmin Venu Sq 2), iterations 001-070
+
+Scope: a generative design loop that produced 60 approved 320x360 faces, two Blender rendering
+spikes, and a component-first 3D rebuild. The point of this document is that the *process*
+lessons are worth more than the artwork. Numbers are the real measured ones from this project.
+
+---
+
+## 1. Process: what actually made the loop work
+
+**L1. Separate the creator from the verifier, and make the verifier re-measure.**
+The generator's self-reported numbers ran optimistic on every single round: claimed needle and
+hand deltas of exactly `0.00°` measured 2.4° and 3.5°; claimed `17.6:1` chart contrast measured
+`14.2:1`; claimed "the ≥6 px bright run is confined to fork junctions" measured 23-37 such rows.
+None changed a verdict, but none could be trusted either. The reviewer re-measuring the saved
+image — never reading the generator's log — is what kept the project honest.
+
+**L2. Freeze the bar before rendering, and forbid moving goalposts.**
+Write the numeric pass condition into the spec *before* the batch exists, and put anti-goalpost
+rules in the rubric: no new criterion may gate a verdict unless it was published earlier; a newly
+noticed issue is a NOTE that gates only from the *following* round; re-score the previous best as
+a drift control every round. Without this an LLM reviewer quietly raises the bar forever and the
+loop never converges.
+
+**L3. Two phases, opposite standards.**
+*Concept sweep*: rough, fast, high variance — and rough edges must NOT be polished, because the
+only question is "is this idea cool?". *Form finalists*: polish and exact numbers, and only here
+can something be approved. Applying finish quality to a concept wastes the budget; letting a
+sketch through the finish gate wrecks the bar.
+
+**L4. A reviewer can and should reject everything.**
+`REJECT_ALL` — declare a whole family dead and demand a fresh organising idea — is a necessary
+verdict. Without it the loop optimises a bad idea forever.
+
+**L5. Assemble the deliverable from curated picks, not from "the last thing rendered".**
+Yes, keep a ledger (iterations spent, per-round outcome, best-of-batch, fixes carried forward),
+but also curate at the end.
+
+---
+
+## 2. Measurement: the lessons that cost the most time
+
+**L6. Measure the datum, not its container.**
+A box spanning a whole nixie tube returned `ink_height = 145 px` for a 51 px digit, because the
+threshold mask caught the bright glass wall instead of the glyph. Sanity check: **if several
+different regions return an identical ink height, the box is too big.** Use a tight box per glyph.
+This mistake was made twice, in two different pipelines.
+
+**L7. Never measure contrast against a region average** — use the surface immediately behind the
+stroke (a ring outside the ink mask), and **always state the ring radius**. The same artifact
+reads ~2 points different between a 2 px and a 16 px ring. Two reviewers disagreed about a
+baseline purely because one sampled the plate average and the other the local background.
+
+**L8. A bounding box that carries glow/bloom padding is the wrong object for a clearance test.**
+A bbox-to-bbox "4.9 px collision" measured ≥10 px ink-to-ink, and a claimed "0.0 px" screw
+collision did not reproduce at all — the real distance was 52 px. Measure nearest ink pixel.
+
+**L9. Watch for measurement-gaming, and add a wide-ring control.**
+A per-stroke halo lifted exactly the pixels the ring test samples (14.2:1 at 2 px vs 12.9:1 at
+16 px). Requiring the same artifact to clear the bar at a wide ring is what makes the number mean
+something. If it passes anyway, the halo is cosmetic noise, not a cheat.
+
+**L10. Optical criteria must be judged optically.**
+A mandatory "≥6 px bright core" turned electric arcs into fat 13-16 px columns instead of thin
+branching bolts. The numeric proxy destroyed the intent it was written to protect. State optical
+criteria as optical, judge with crops at 4-10x, and keep numeric proxies out of the gate.
+
+**L11. Fit text size on the ink height of the glyphs actually present, not on a nominal cap.**
+Most serif faces use *old-style figures* (3,4,5,7,9 descend; 6,8 ascend), so `8,342` at a nominal
+24 px cap rendered 38 px. Only Times Bold had lining figures among the installed set. Probe for it.
+
+---
+
+## 3. Blender / headless: every one of these cost a failed render
+
+**L12. `--background` loads Blender's default startup scene** (Cube + Camera + Light). The default
+Cube enclosed the test scene and rendered as a flat grey slab. Always
+`bpy.ops.wm.read_factory_settings(use_empty=True)` first.
+
+**L13. Blender resolves a relative render filepath against its own CWD, not the script's** — it
+wrote to `C:\probe_out.png` and failed with "Permission denied". Use absolute output paths.
+
+**L14. The screen vertical is world Z, and view depth is world Y.** Rotating a cylinder 90° about
+X to "lay it down" makes its length run *into* the screen, producing a 150 px deep solid glass rod
+that swallowed the digits. Tubes take the default Z axis; only camera-facing discs take `axis='Y'`.
+
+**L15. Smaller y is nearer the camera.** Emissive digits placed at y=+0.06 sat *inside* the solid
+box of the plate meant to carry them, so the plate occluded its own data. Print each object's
+`front_y` in a layer self-check.
+
+**L16. A nixie tube must be a hollow shell, and a single-sided shell reads as SOLID glass.**
+Open cylinder + Solidify; and apply scale first or thickness/IOR/volume absorption all mis-scale.
+
+**L17. A crashed interpreter loses buffered stdout.** A native crash (PIL's `MinFilter` accepts only
+odd kernels ≥3 — `MinFilter(1)` kills the process) showed as a silent non-zero exit with no output.
+Run unknown scripts with `-u`, and log to a file rather than reading a pipe.
+
+**L18. Log to a file and grep it. Blender's stdout is enormous.** Piping it through `head` silently
+truncated the very lines I needed (my own layer self-check) while pages of "Synchronizing object"
+went past. Write to a log, grep for your own markers.
+
+---
+
+## 4. The central finding: photorealism fights legibility
+
+**L19. A self-luminous datum cannot hold a contrast bar in a photoreal render environment.**
+All-in-Cycles measured a best of **2.9:1** against a 12:1 requirement, in both tone-mapping
+regimes: AgX compresses emissive glyphs to grey, Standard clips them to white where their own
+bloom then floods the frame. And a glyph behind curved glass is smeared by refraction however it
+is lit. This is physics, not a bug.
+
+**L20. Split the problem: render the machine photoreal, composite the data, gate with the harness.**
+Cycles renders hardware with no data objects in the scene; the numerals are composited in a
+controlled pass. Time digits went **2.9:1 → 12.5-13.8:1** at the 6 px ring. The weak link moved
+from the renderer to the data design — which is exactly where the generator/reviewer loop works.
+
+**L21. Two techniques made the composite work, and both are honesty mechanisms, not decoration.**
+A **dark inner sleeve** inside the glass tube (without it the interior refracts warm brass and
+there is no dark ground to composite onto), and a **dark contour around each glowing glyph**
+(without it the bloom occupies precisely the pixel the 2 px ring samples).
+
+**L22. Read reference images carefully, and let the user correct you.** A mood board reading
+`1248` was a real 12:48 time, a real step counter and a real day number — a layout *blueprint*,
+not decoration. Misreading it as noise cost a whole round of material variations, and the two
+best ideas in the project (the weekday-ring date dial, the odometer counter) came from the user's
+correction.
+
+---
+
+## 5. Research
+
+**L23. Prefer written technical sources; video pages extract to nothing.** Blender Stack Exchange,
+Blender Artists threads with node screenshots, and the official manual produced concrete parameter
+values. YouTube pages produced 2 KB of boilerplate.
+
+**L24. The thing you were told exists may not.** "Render the sparks through a Blender plug-in" —
+verified against the Extensions platform *and its JSON API*, the installed build (14 bundled
+add-ons, none electrical/VFX), and the paid market: **no good add-on exists**; the market sells
+Geometry-Nodes node groups. Verification cost minutes and saved an unknown amount of flailing.
+
+**L25. Verify against the actual install, not memory.** The researcher's own recollection said Cell
+Fracture ships with Blender; inspecting the build showed it does not (it moved to Extensions after
+4.1).
+
+**L26. Tell researchers to mark UNVERIFIED rather than fill gaps.** Every guide produced came back
+with an explicit list: no canonical emission strength for a discharge (published examples span
+3-100), the brass base colour interpolated from Blender's copper/gold conductors, cm-scale volume
+density derived rather than published. Those lists are more useful than fake precision.
+
+---
+
+## 6. Time and token efficiency (what to change next time)
+
+**L27. Parameterise attempts; never rewrite the scene.** The component runner took a JSON parameter
+block (`{"ring_steps":2,"knurl":0,"lamps":3,...}`), so a variation was a data edit rather than a
+30 KB script rewrite. This is the single biggest time saver in the whole 3D phase.
+
+**L28. Store every attempt and build progress sheets.** 23 saved tube attempts plus A/B sheets let
+one vision call judge a whole progression. **Judging N images in one contact sheet instead of N
+separate vision calls is the biggest token saver available.**
+
+**L29. Give children documents to READ, not text to parse.** Pasting the full technique guide into
+a task prompt costs thousands of tokens per child; writing it once to disk and saying "read
+`hybrid/research/TECHNIQUES_tube_and_socket.md`" costs ~20.
+
+**L30. Have the creator run its own verification and self-check before the verifier sees anything.**
+The cheapest defect is the one caught in the same agent, in the same context, without a round trip.
+
+**L31. Numbers in the return schema, not prose.** Require printed measurements in a structured
+field so the orchestrator can compare rounds mechanically instead of reading paragraphs.
+
+**L32. Do one render per component, not one render of everything.** Component-first makes each
+judgement tractable, keeps failures isolated, and lets the pieces be validated in parallel or
+sequentially without one broken part contaminating the review of another.
+
+**L33. Delegate the context-heavy work.** Rule-of-thumb from this project: long design loops,
+literature/technique research, and independent verification are all worth delegating; quick
+parameter checks, one-shot renders and anything needing the user's eye are not.
+
+**L34. Kill a broken direction early.** Two steers ("the glass is milky", "the silhouette is a bell,
+not a drawn nipple") after 20 attempts saved the remaining 30 from chasing the wrong target.
+Reviewing a child's in-flight output is cheaper than letting it finish.
+
+---
+
+## 7. What I would do differently
+
+1. **Build the measurement harness before the first render**, not after the first false number.
+2. **Write the rubric and freeze the bar before any artifact exists** — here it needed a mid-loop
+   correction because the target moved, and the honest handling of that (NOTE now, gate later) was
+   more work than doing it up front.
+3. **Ask the user to confirm the reading of every reference image** at intake. One question would
+   have saved a round.
+4. **Go component-first from the start.** Rendering the whole face repeatedly to fix one part
+   wastes the most expensive resource (render time) and the hardest to manage (attention).
+5. **Test the raytracer's *data* legibility before investing in its *materials*.** The spike would
+   have been 20 minutes instead of an hour if the first test had been "can a glowing digit be read
+   in this environment" rather than "does brass look like brass".
+
+---
+
+## 8. The Connect IQ phase — a watch face on real hardware
+
+The finished design was re-implemented as a watch face in Monkey C for a Venu Sq 2 Music
+(320×360 AMOLED). Different platform, same lesson as §2 and §4: **the numbers that decide the
+layout are the ones the device itself reports.**
+
+**L35. A bitmap font cannot be scaled at runtime, so every size the layout needs is its own font
+resource.** The layout wanted 53 px tube digits, 32 px gauge digits, 29 px for the heart rate,
+23 px for the odometer drums and 11 px labels, against a device whose *smallest* built-in font is
+39 px. Five font resources — and each one is a separate atlas in memory. Decide the sizes once, from
+measurements, because adding a size later means adding a resource.
+
+**L36. Fit a font size on measured ink, not on the point size, and fit it to the container's clear
+interior, not to the grid pitch.** Ink height came out at ≈ 0.67 × the point size (old-style serif
+figures): 76→53 px, 48→32, 43→29, 34→23. And the drums are pitched 19 px apart but only have ~28 px
+of clear dark inside the window — so the 32 px digit that "fitted the layout" spilled onto the brass
+frame, and the fix was a shorter font, not a smaller number.
+
+**L37. A glow on a Garmin is solid pixels, and the core must out-shine its own halo.** `drawText`
+has no alpha and a bitmap font cannot be blurred, so a bloom can only be painted as offsets of the
+same glyph in dimmer colours — far ring first, then the near ring, then the core. The first attempt
+used a mid-blue core and it dissolved into the glow; the user caught it immediately ("the font within
+the glow should be brighter/whiter so it is not blurred into the glow"). **The halo carries the
+colour; the core carries the contrast.**
+
+**L38. Declaring a resource and generating it are one change.** `fonts.xml` was committed listing
+`NixieMid` before `make_fonts.py` had ever written `NixieMid.fnt`, so the tree as committed could not
+build. Generate, then declare, in the same commit — or the next person's first build fails for a
+reason that has nothing to do with their change.
+
+**L39. Read the simulator's own status bar instead of reasoning about the memory budget.** The CIQ
+simulator window reports a used/limit kB figure (123.9 kB here, i.e. the device's watch-face limit)
+and it sat at 10.2 kB with five fonts and a 64-colour full-screen background loaded. What that number
+does and does not count is **UNVERIFIED** — it is not obviously additive with the `w*h*bpp/8` rule
+that says the background alone is 86 KB — so treat it as a liveness/trend indicator, not a budget
+audit. (The build failing is what actually tells you a resource set is too big.)
+
+**L40. Screenshotting the simulator: grab the window, and do not try to infer the screen rectangle.**
+`ImageGrab` can only see what is on top of a screen rectangle, and `SetForegroundWindow` is refused
+for a background process — the first capture was a web browser that happened to sit over the
+simulator's rectangle. `PrintWindow` (with `PW_RENDERFULLCONTENT`) makes the window draw itself into
+a memory DC and needs no focus, which fixed the capture. **The crop did not get fixed by anything.**
+The device screen is not findable by brightness: the case's black bezel, the artwork's own black
+bands, the simulator's dark toolbar/status bar and the window's black non-client regions are all
+`rgb(0,0,0)`, and a warm-pixel (brass) match latches onto window chrome. Three automatic
+calibrations — dark-region bbox, brass-silhouette matching, warm-row density band — each returned a
+wrong rectangle, and a wrong crop is worse than no crop because it looks like a rendering bug. The
+crop is now an explicit `--crop x0,y0,x1,y1`, checked against a 320:360 aspect sanity test.
+
+**L41. Three commands are worth more than the steps they save here.** The loop "change a constant →
+build → push → look → ship" is what this phase actually consists of, so it got three tools:
+`ciq/preview.py` composites the frame offline from the view's *own parsed constants* (no drift, no
+build — a layout tweak in a second), `ciq/simshot.py` builds, pushes and captures the simulator in
+one command, and `ciq/push_watch.ps1` sideloads to the real watch and proves the copy by reading it
+back and comparing SHA-256. The preview is the fast loop; the simulator and the watch stay the source
+of truth — a preview that disagrees with the device is a bug in the preview.
+
+**L41b. A Garmin watch is an MTP device, not a disk.** There is no drive letter, so `cp` and
+shell-by-path do not work; the copy has to go through the shell's namespace
+(`Shell.Application` → *This PC* → the device → `Internal Storage\GARMIN\APPS`) via PowerShell. And
+MTP copies report success without guaranteeing anything, so the push script reads the file back and
+compares hashes. Also: **a watch that drops MTP leaves a USB device Windows can no longer bind to** —
+`Get-PnpDevice -Class WPD` still lists it while *This PC* does not, and the fix is to unplug and
+replug, not to retry the copy.
+
+**L42. `monkeydo` is slow and blocking, not broken — do not read "still running" as a hang.** It
+needs the simulator already running (with none it queues instead of erroring), and a push has been
+observed to take anywhere from ~50 s to several minutes while it waits on the simulator, *after which
+it returns 0*. The lesson is about the diagnosis, not the tool: the first push was watched to a
+268 s "hang", killed, and the push actually succeeded — the same command, left alone, exited cleanly.
+If a command's job is "push a file and wait", give it minutes and a generous timeout, and confirm the
+outcome from the artifact (here: the simulator rendering the new build), never from how long it took.
+Wrapping it in a short timeout is exactly what discards a successful push.
+
+**L43. Push a dial's text against the ring, not against the neighbouring line.** "Lower the weekday
+and the day slightly" is a *radial* move inside a round dial: what has to stay clear is the dial's
+rim at the top and the month at the bottom, so the check is the ink-to-rim gap at each row, not the
+line spacing. (The same class of error as L8 — measuring the wrong object.)
+
+**L44. DECISION — split-scale layout, candidate C (user-approved).** The face was too small: the
+uniform width-fit (0.3365) kept the whole device on screen. A uniform scale cannot enlarge it much,
+because the dial *centres* sit near the art's edges (x 207 / 813), so above ~0.38 a readout leaves
+the screen before the tubes fill the width. The fix was to scale the halves independently —
+**tubes + manifold at 0.49, dials + counter at 0.43** — joined across the dark gap under the
+manifold (source y 506) with an 8 px feather, which shows no seam. The user was shown three
+mockups (`ciq/artwork/zoom/_zoom_compare.png`: uniform 0.38, split 0.46/0.40, split 0.49/0.43) and
+chose C, plus **removing the heart-rate dial's winged pointer** (inpainted out of the dial face in
+`prepare_artwork.py`). Cost accepted: the tubes are larger relative to the dials than in the art,
+the outer sparks and side pipes are cropped, the tube tips touch the top edge. Digit ink went
+53→75 (time), 29→37 (HR), 32→42 (day), 23→29 (steps). The general form: when one transform cannot
+satisfy two regions, split the transform at a seam the art already hides, rather than compromising
+both. Carry the text coordinates as *source-grid* points (the old shipped values mapped back), so
+hand nudges survive a rescale.
+
+**L45. A preview that has never been compared to the device has bugs you have stopped seeing.**
+`preview.py` shipped with two: it read a stale `resources/images/background.png` (brown watermark
+patch) instead of the drawable the build uses, and it passed `0xRRGGBB` ints straight to PIL, which
+reads a bare int as `0xBBGGRR` — so the blue glow rendered orange and the ivory text blue, in every
+preview since it was written. Both were caught only by looking at it next to a change. Point a
+preview at the exact file the build packages, and convert colours explicitly.
+
+**L46. DECISION — the AMOLED needs warm tones pre-corrected, and the compiler owns the palette.**
+Two findings, both measured:
+1. *The panel shifts brass to copper.* In one photo holding both the monitor (simulator) and the
+   watch, the same brass read hue 28° on the monitor and 17° on the watch, G/R 0.69 vs 0.54, and
+   slightly more saturated. The simulator capture matched the source exactly (31°), so the build was
+   right and the shift is the panel. `device_colour.py` rotates warm hues +11° and trims their
+   saturation ×0.9 before the build, weighted to warm hues only (the blue glow and lamps measured
+   unchanged). On a monitor the result looks yellow-green — that is the pre-compensation. A
+   four-strip calibration build (`make_calibration.py`: +0/+6/+11/+16°) was sideloaded, and the
+   user confirmed the corrected face "looks good on the actual watch".
+2. *Our palette reduction was pointless and harmful.* `automaticPalette` defaults to TRUE on 16-bit
+   devices, so the compiler reduces any bitmap to ≤256 colours itself: 64-colour, 256-colour and
+   full-colour PNGs compiled to .prg files within 0.4 % of each other. The 64-colour PNG only threw
+   away colours — it was the posterised tube glass. With `automaticPalette="false"` the bitmap is
+   true 16-bit (.prg +114 KB, which is exactly the 8→16 bpp difference) and it loads and renders on
+   the watch: bitmaps live in the graphics pool, not the 128 KB app heap, so the earlier "must
+   palette-reduce to fit 128 KB" reasoning (from `w*h*bpp/8` arithmetic) was wrong. Read what the
+   compiler does before doing its job for it, and measure the artifact (.prg size) to see what it
+   actually stored.
+
+**L47. A verify step can fail in ways that look like the thing it verifies failing.**
+`push_watch.ps1` had three bugs, all of which reported a broken push on pushes that worked:
+an em-dash inside a string broke Windows PowerShell 5.1's parse of the whole file (it reads
+BOM-less UTF-8 as ANSI, and the dash's last byte is a curly quote in cp1252 — keep `.ps1` strings
+ASCII); the readback looked for a renamed file, but Shell `CopyHere` keeps the source name; and when
+overwriting an earlier build, "the file is present" is true at once — it is the *old* file — so a
+single readback compared the previous build's hash. The script now reads back into its own folder
+and retries until the hash matches. The independent check that exposed each one was hashing the
+read-back file by hand.
+
+**L48. DECISION — the date goes into the dial's ring (user-approved: the 54 px version of
+`ciq/artwork/date_ring/_compare.png`).** Weekday and month are set one letter per segment of the
+date dial's outer ring, rotated to it; the day number alone fills the inner disc (42 → 53 px ink).
+Two things made it work. *Measure the art's own divisions, do not assume a grid:* the ring's 12
+dividers are hand-drawn and 25–36° apart, and an automatic peak-pick mislocated three of them —
+reading the dividers off a polar unwrap of the dial was what put each letter inside its segment.
+*Pre-render what the device cannot draw:* `drawText` has no angle, so the 19 words are opaque
+patches of the shipping background with the letters blended in — no bitmap alpha needed, compiled
+16-bit like the background so no palette edge shows, loaded once a day rather than per frame.
+
+**L49. The glow pulse was invisible because the swing was relative to a dark colour.** 78–100 % of
+the halo's dark blues moved them a few levels, and a fresh random target every frame read as noise.
+What made it visible was an absolute-looking swing (35–120 %), *holding* each level for a few frames
+and easing toward it, and an instant flash on strike that fades. Judge an animation parameter by
+the colour it acts on, on the target screen — not by the percentage.
+
+**L50. DECISION — heart rate as a zone gauge, variant B (user-approved: row B of
+`ciq/artwork/hr_gauge/_compare.png`).** BPM is gone; a band round the HR dial runs cold blue →
+green → orange → red and is lit up to the current rate, dim beyond. Each of the user's five zones
+(`UserProfile.getHeartRateZones`, which needs the `UserProfile` permission) gets an equal fifth of
+the arc, as Garmin's own zone gauges do — so the colours sit at fixed angles for every user and
+the dim band can be *baked into the background*; the watch draws only the lit part, one `drawArc`
+per 5° segment from a generated colour table. Put live-drawn colours through the same AMOLED
+correction as the baked ones (both come from `hr_gauge.py`), or the lit and dim halves of one
+band disagree on the panel. The arc opens to the screen edge because the dial's centre is 29 px
+from it. Below zone 1 (a resting rate) nothing is lit — so the preview's mock HR is now 128.
+
+**L51. Tooling for cheap iterations: one command per stage, one line per result.**
+`ciq/make.py` runs the asset chain in its dependency order (artwork → corrected background with
+the baked gauge → gauge table → date-ring patches → fonts), builds every product with a size +
+sha256 line each, previews, and pushes with verification — printing full output only on failure.
+Rules that keep a change cheap:
+- Change a constant → `make.py preview` (seconds). Only `make.py push` when it should be on the
+  wrist; only `simshot.py` when the simulator is genuinely needed (monkeydo takes minutes, L42).
+- Generated files (`DateRing.mc`, `HrGauge.mc`, the ring patches, the fonts) are rebuilt by
+  `make.py assets`; never hand-edit them, never re-read them to "check" — read the generator.
+- Compiler intermediates (`external-mir/`, `internal-mir/`) are untracked: each build rewrote
+  ~2,000 lines of them into every diff.
+- Commit with explicit paths (`git add -A -- <paths>`) and check `git diff --cached --name-status`
+  first. A chained `git add -u` that fails half-way leaves files staged, and the next commit
+  silently sweeps them in (it happened once here; fixed by a soft reset before anything was shared).
+  The same goes for deletions staged early with `git rm`: they ride along with whichever commit
+  comes next, so stage deletions in the commit they belong to, and read the staged list every time.
+- Decision mockups (`zoom_candidates.py`, `date_ring_mockup.py`, `hr_gauge_mockup.py`) stay as the
+  record of what was shown; the shipping code lives in the generator they led to.
+
+**L52. The build is deterministic, so "the watch runs HEAD" is a hash comparison, not a memory.**
+Two `monkeyc` builds of the same tree are byte-identical (measured), so `make.py build` on a clean
+tree prints the sha256 the watch *should* hold, and `make.py push` reads the device copy back and
+compares. When asked "is it on the watch?", answer from that pair of hashes; it costs two lines.
+(Two builds of the same sources made an hour apart once differed by a 4-byte metadata shift with
+identical pixel data, so compare against a fresh build of the current tree, not an old .prg.)
+
+**L53. Before a repo goes public, scan the HISTORY, not the tree — then decide what history to
+publish.** The working tree was clean, but `gitleaks detect` over all commits found the original
+signing key (`ciq/keys/developer_key.pem`, committed before its ignore rule existed). History
+also held a deleted third-party product photo (the Devon Tread 1 reference) and compiler
+intermediates whose paths embedded the Windows username. Deleting a file does not remove it from
+history, and the key being void (it was regenerated) does not make publishing it acceptable. The
+user chose to publish a single fresh commit of the cleaned tree; the full private history is kept
+as a backup bundle outside the repo. The gates now match eClock: gitleaks + `detect-private-key`
+pre-commit hooks, a full-history gitleaks CI job that also fails if any key or build output is
+tracked, belt-and-braces `.gitignore` patterns (`*.pem *.der *.key .env* *.iq /release/`), and
+machine paths written as `%APPDATA%` rather than a home directory. Image metadata was checked too:
+the AI images carry Microsoft's C2PA provenance (generator, timestamps), which was kept on purpose.

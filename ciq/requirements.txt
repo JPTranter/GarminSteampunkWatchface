@@ -1,0 +1,6 @@
+# Python packages for the asset pipeline (ciq/make.py assets / preview / screenshots).
+# Tested with Python 3.14, Pillow 12.3, NumPy 2.5, OpenCV 5.0. Not needed to just build the
+# face from the committed resources - monkeyc alone does that.
+pillow>=11
+numpy>=2
+opencv-python>=4.10

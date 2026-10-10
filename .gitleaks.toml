@@ -1,0 +1,19 @@
+# gitleaks configuration - https://github.com/gitleaks/gitleaks#configuration
+#
+# Same policy as the sibling eClock project: the default rule set (private keys, tokens, API
+# keys, credentials) applies to EVERYTHING, and the allowlist holds only known-safe content.
+#
+# This repo has one real secret: the Connect IQ developer signing key (ciq/keys/). It is
+# gitignored and must never be committed - gitleaks' private-key rule and pre-commit's
+# detect-private-key both block it. Nothing is allowlisted for it.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe binaries"
+# Image binaries (renders, artwork, the AI art's C2PA provenance certificates) and compiled
+# bitmap-font atlases can trip the generic high-entropy heuristics; they hold no credentials.
+paths = [
+    '''\.(png|gif|jpg|jpeg)$''',
+]

@@ -1,0 +1,26 @@
+# Pre-commit configuration - https://pre-commit.com  (same gate as the sibling eClock project)
+#
+# The primary security hooks are gitleaks (secret scanning) and detect-private-key: this repo's
+# one real secret is the Connect IQ signing key in ciq/keys/ (gitignored), and either hook
+# blocks a commit that would include it. The rest are lightweight hygiene checks.
+#
+# Install once:   pip install pre-commit
+# Install hooks:  pre-commit install
+# Run now:        pre-commit run --all-files
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+        args: [--config, .gitleaks.toml]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: detect-private-key         # blocks a committed private key outright
+      - id: check-added-large-files    # renders are up to ~2.2 MB; anything bigger is a mistake
+        args: [--maxkb=3000]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-xml

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+  <iq:application
+      entry="SteampunkNixieApp"
+      id="9f1c7a54-3b2e-4d68-9a11-5c8e2f0b7d43"
+      launcherIcon="@Drawables.LauncherIcon"
+      name="@Strings.AppName"
+      type="watchface"
+      minApiLevel="5.0.0"
+      version="1.0.0">
+    <iq:products>
+      <!-- Venu Sq 2 and Venu Sq 2 Music are SEPARATE device ids with identical specs.
+           Listing both, since the SDK device library carries both. -->
+      <iq:product id="venusq2"/>
+      <iq:product id="venusq2m"/>
+    </iq:products>
+    <iq:permissions>
+      <!-- UserProfile ONLY: the heart-rate zone gauge reads the user's own zone thresholds
+           (UserProfile.getHeartRateZones). ActivityMonitor (steps + getHeartRateHistory) needs no
+           permission, and Toybox.Sensor is not grantable to a watch face. Request the minimum:
+           every permission shows in the install prompt. -->
+      <iq:uses-permission id="UserProfile"/>
+    </iq:permissions>
+    <iq:languages>
+      <iq:language>eng</iq:language>
+    </iq:languages>
+  </iq:application>
+</iq:manifest>

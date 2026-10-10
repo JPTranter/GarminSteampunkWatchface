@@ -1,0 +1,13 @@
+<resources>
+  <drawables>
+    <!-- ids declared EXPLICITLY rather than inferred from the filename, so the code can rely on
+         Rez.Drawables.Background / Rez.Drawables.LauncherIcon -->
+    <bitmap id="LauncherIcon" filename="launcher_icon.png" />
+    <!-- automaticPalette="false": full 16-bit (RGB565). The default on 16-bit devices is TRUE,
+         which reduces the bitmap to <=256 colours at compile time and posterised the enlarged tube
+         glass. Measured: .prg 222,684 B (auto, 8 bpp) -> 336,860 B (16 bpp), and confirmed loading
+         and rendering on the Venu Sq 2 Music itself - the bitmap lives in the graphics pool, not
+         the 128 KB app heap (the simulator reports ~10 kB app memory either way). -->
+    <bitmap id="Background" filename="background.png" automaticPalette="false" />
+  </drawables>
+</resources>
