@@ -3,7 +3,7 @@
 **Four glowing nixie tubes on a brass steampunk machine, with arcs that crackle between the tube
 tips every time you raise your wrist.**
 
-![Steampunk Nixie watch face](docs/images/face.png)
+![Steampunk Nixie: glowing nixie tubes on a brass machine, arcs cracking between the tube tips](docs/store/hero_1440x720.png)
 
 ![Arc flicker and glow pulse](docs/images/discharge.gif)
 
