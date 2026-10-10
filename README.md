@@ -10,7 +10,10 @@ tips every time you raise your wrist.**
 ![Steampunk Nixie running on a Venu Sq 2 on the wrist](docs/images/wrist-demo.gif)
 
 *On the wrist: a real Venu Sq 2 running the face — this one is a photo, not a render.
-[Full clip with voiceover, 4.9 s MP4](docs/store/wrist-demo-youtube.mp4).*
+[Full clip with voiceover, 4.9 s MP4](docs/store/wrist-demo-youtube.mp4)
+· [watch it on YouTube](https://www.youtube.com/shorts/sfjKgEaZ3kU).*
+
+<a href="https://www.youtube.com/shorts/sfjKgEaZ3kU"><img src="https://img.youtube.com/vi/sfjKgEaZ3kU/oar2.jpg" width="190" alt="Steampunk Nixie on YouTube — the face on the wrist, with voiceover"></a>
 
 [![CI](https://github.com/JPTranter/GarminSteampunkWatchface/actions/workflows/ci.yml/badge.svg)](https://github.com/JPTranter/GarminSteampunkWatchface/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/JPTranter/GarminSteampunkWatchface)](https://github.com/JPTranter/GarminSteampunkWatchface/releases)
@@ -43,6 +46,7 @@ them. They aren't photos.*
 |---|---|
 | **Sideload a release** | Download the `.prg` for your watch from [Releases](https://github.com/JPTranter/GarminSteampunkWatchface/releases) and copy it into `GARMIN/APPS` over USB. [Step by step](docs/USER_MANUAL.md#2-install-a-release-no-tools-needed). |
 | **Connect IQ Store** | Submission prepared ([docs/store](docs/store/SUBMISSION.md)). Once it's live, search *Steampunk Nixie* in the Connect IQ app. |
+| **Watch it** | [On YouTube](https://www.youtube.com/shorts/sfjKgEaZ3kU) — 5 s of the face on the wrist, with voiceover. |
 | **Build it yourself** | Connect IQ SDK + your own signing key: [User Manual §4](docs/USER_MANUAL.md#4-build-it-yourself). |
 
 Supported: **Venu Sq 2** and **Venu Sq 2 Music** (320 × 360 AMOLED). The only permission is
