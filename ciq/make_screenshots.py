@@ -10,7 +10,8 @@ Writes:
     docs/images/states.png         three heart rates side by side (rest / workout / peak)
     docs/images/discharge.gif      arc flicker, glow pulse and a step-belt rollover (1x)
     docs/store/screenshot_N.png    320x360 1x device-size screenshots for the store listing
-    docs/store/hero.png            640x720 store hero image
+    docs/store/hero.png            640x720, the face alone
+    docs/store/hero_1440x720.png   1440x720 store hero banner (title + tagline + face, OFL fonts)
 """
 import os
 
@@ -28,6 +29,62 @@ def seen(hr, discharge=None, scale=2):
     c = preview.parse_constants()
     f = device_colour.as_seen(preview.render(consts=c, hr=hr, discharge=discharge))
     return f.resize((320 * scale, 360 * scale), Image.LANCZOS) if scale != 1 else f
+
+
+def hero_banner(c):
+    """1440x720 Connect IQ Store hero: the face (as seen, mid-strike) on the right, the title and
+    a tagline on the left over a soft blue glow. Text uses the OFL fonts in fonts-src/ only."""
+    import numpy as np
+    from PIL import ImageFilter, ImageFont
+    W_, H_ = 1440, 720
+    yy, xx = np.mgrid[0:H_, 0:W_].astype(np.float32)
+    glow = np.exp(-(((xx - 1040) / 520) ** 2 + ((yy - 300) / 340) ** 2))
+    bg = np.stack([8 + 10 * glow, 10 + 26 * glow, 16 + 52 * glow], -1)
+    img = Image.fromarray(bg.clip(0, 255).astype(np.uint8), "RGB")
+
+    dis = preview.Discharge(c)
+    for _ in range(9):                      # a frame with an arc striking (same seed as the watch)
+        dis.step()
+    face = device_colour.as_seen(preview.render(consts=c, hr=150, discharge=dis))
+    face = face.resize((640, 720), Image.LANCZOS)
+    x0 = 760
+    # feather the face's left/right edges into the background (its own surround is black, so a
+    # hard paste leaves a visible panel edge against the blue gradient)
+    fm = np.ones((720, 640), np.float32)
+    ramp = np.linspace(0, 1, 40, dtype=np.float32)
+    fm[:, :40] *= ramp[None, :]          # 40 px: wider fades the HR dial's first digit
+    fm[:, -40:] *= ramp[::-1][None, :]
+    fmask = Image.fromarray((fm * 255).astype(np.uint8), "L")
+    halo = Image.new("L", (W_, H_), 0)      # soft shadow so the face lifts off the background
+    ImageDraw.Draw(halo).rectangle((x0 + 40, 14, x0 + 620, 706), fill=150)
+    halo = halo.filter(ImageFilter.GaussianBlur(28))
+    img = Image.composite(Image.new("RGB", (W_, H_), (0, 0, 0)), img, halo)
+    img.paste(face, (x0, 0), fmask)
+
+    fonts = os.path.join(HERE, "fonts-src")
+    title_f = ImageFont.truetype(os.path.join(fonts, "nixieone_NixieOne-Regular.ttf"), 112)
+    body_f = ImageFont.truetype(os.path.join(fonts, "oswald_Oswald[wght].ttf"), 34)
+    body_f.set_variation_by_name("Light")
+    small_f = ImageFont.truetype(os.path.join(fonts, "oswald_Oswald[wght].ttf"), 26)
+    small_f.set_variation_by_name("Light")
+
+    # title with the face's own nixie glow: blurred blue under a near-white core
+    t = Image.new("L", (W_, H_), 0)
+    td = ImageDraw.Draw(t)
+    td.text((70, 150), "Steampunk", font=title_f, fill=255)
+    td.text((70, 272), "Nixie", font=title_f, fill=255)
+    for radius, colour in ((18, (40, 110, 200)), (6, (90, 170, 255))):
+        img = Image.composite(Image.new("RGB", (W_, H_), colour), img,
+                              t.filter(ImageFilter.GaussianBlur(radius)).point(lambda v: min(255, v * 2)))
+    img = Image.composite(Image.new("RGB", (W_, H_), (234, 246, 255)), img, t)
+
+    d = ImageDraw.Draw(img)
+    d.text((74, 430), "Glowing nixie tubes on a brass machine.", font=body_f, fill=(235, 214, 170))
+    d.text((74, 476), "Arcs crackle every time you raise your wrist.", font=body_f, fill=(235, 214, 170))
+    d.text((74, 560), "Heart-rate zone gauge  ·  rolling step counter  ·  calendar dial",
+           font=small_f, fill=(170, 160, 140))
+    d.text((74, 600), "Venu Sq 2  ·  Venu Sq 2 Music", font=small_f, fill=(130, 125, 115))
+    return img
 
 
 if __name__ == "__main__":
@@ -64,6 +121,8 @@ if __name__ == "__main__":
         frames.append(f.crop((0, 0, 320, 280)))
     frames[0].save(os.path.join(IMG, "discharge.gif"), save_all=True, append_images=frames[1:],
                    duration=c["FRAME_MS"], loop=0, optimize=True)
+
+    hero_banner(c).save(os.path.join(STORE, "hero_1440x720.png"))
     for n in sorted(os.listdir(IMG)) + [f"store/{n}" for n in sorted(os.listdir(STORE))]:
         p = os.path.join(IMG, n) if not n.startswith("store/") else os.path.join(STORE, n[6:])
         print(f"  {n:24s} {os.path.getsize(p) // 1024:5d} KB")
