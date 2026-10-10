@@ -33,9 +33,11 @@ INK_TARGET = {
     "INK_TIME": (252, 226, 150),    # core: hot yellow-white
     # The glow is STATIC at the bright baseline (user decision): the ring no longer pulses, so it is
     # stored at the colour the pulse used to reach at its peak. No headroom is needed now that
-    # nothing scales it.
-    "INK_GLOW1": (255, 118, 38),    # the single halo ring, at the bright baseline
-    "INK_GLOW2": (255, 118, 38),    # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
+    # nothing scales it. The ring moved RED (user: "more red" on the device, after the digits proved
+    # hard to read) - a 1 px halo around the glyph is most of what the digit's colour IS at this
+    # size, so the ring, not the pale core, is the colour to push.
+    "INK_GLOW1": (255, 78, 22),     # the single halo ring, at the bright baseline
+    "INK_GLOW2": (255, 78, 22),     # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
 }
 
 
