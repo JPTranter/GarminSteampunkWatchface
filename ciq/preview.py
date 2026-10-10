@@ -144,6 +144,13 @@ class Discharge:
         self.on = [False] * n
         for k in range(n):
             self.timer[k] = self.between(1, c["ARC_OFF_MAX"])
+        # the side sparks: their own on/off phases, staggered like the arcs (same draw order as the
+        # device, so the LCG stream - and therefore every frame - matches)
+        m = len(c["SPARK_X"])
+        self.spark_timer = [0] * m
+        self.spark_on = [False] * m
+        for k in range(m):
+            self.spark_timer[k] = self.between(1, c["SPARK_OFF_MAX"])
 
     def next(self):
         self.seed = (self.seed * 1103515245 + 12345) & 0x7FFFFFFF
@@ -160,6 +167,13 @@ class Discharge:
                 self.on[k] = not self.on[k]
                 self.timer[k] = (self.between(c["ARC_ON_MIN"], c["ARC_ON_MAX"]) if self.on[k]
                                  else self.between(c["ARC_OFF_MIN"], c["ARC_OFF_MAX"]))
+        for k in range(len(self.spark_timer)):
+            self.spark_timer[k] -= 1
+            if self.spark_timer[k] <= 0:
+                self.spark_on[k] = not self.spark_on[k]
+                self.spark_timer[k] = (self.between(c["SPARK_ON_MIN"], c["SPARK_ON_MAX"])
+                                       if self.spark_on[k]
+                                       else self.between(c["SPARK_OFF_MIN"], c["SPARK_OFF_MAX"]))
 
     def clamp_y(self, y):
         return min(max(y, float(self.c["ARC_Y_MIN"])), float(self.c["ARC_Y_MAX"]))
@@ -170,6 +184,35 @@ class Discharge:
         for k in range(len(self.on)):
             if self.on[k]:
                 self.draw_arc(d, k)
+        for k in range(len(self.spark_on)):
+            if self.spark_on[k]:
+                self.draw_spark(d, k)
+
+    def draw_spark(self, d, k):
+        """The device's drawSpark: SPARK_LINES filaments fanning UP from the painted spark's core,
+        each bent across its own path, bloom (3 px) -> sheath (2 px) -> core (1 px), plus the head.
+        The random draws are consumed in exactly the device's order (degree, length, bend, tip
+        jitter, per filament, per pass) or the LCG stream diverges and the replay drifts."""
+        import math
+        c = self.c
+        ox, oy = c["SPARK_X"][k], c["SPARK_Y"][k]
+        for pen, ink in ((3, c["ARC_BLOOM"]), (2, c["ARC_SHEATH"]), (1, c["ARC_CORE"])):
+            col = rgb(ink)
+            for _ in range(c["SPARK_LINES"]):
+                deg = (c["SPARK_UP"] + c["SPARK_BIAS"][k]
+                       + (self.between(0, 2000) - 1000) * c["SPARK_SPREAD"] / 1000.0)
+                rad = math.radians(deg)
+                dx, dy = math.cos(rad), math.sin(rad)
+                ln = float(self.between(c["SPARK_LEN_MIN"], c["SPARK_LEN_MAX"]))
+                kink = float(self.between(-5, 5))
+                mx = ox + dx * ln * 0.55 - dy * kink
+                my = oy + dy * ln * 0.55 + dx * kink
+                tx = ox + dx * ln - dy * kink + self.between(-4, 4)
+                ty = oy + dy * ln + dx * kink
+                d.line([(ox, oy), (mx, my)], fill=col, width=pen)
+                d.line([(mx, my), (tx, ty)], fill=col, width=pen)
+        d.ellipse([ox - 2, oy - 2, ox + 2, oy + 2], fill=rgb(c["ARC_CORE"]))
+        d.ellipse([ox - 4, oy - 4, ox + 4, oy + 4], outline=rgb(c["ARC_BLOOM"]))
 
     def draw_arc(self, d, k):
         c = self.c

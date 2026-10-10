@@ -28,6 +28,24 @@ const ARC_BLOOM = 0x2F6EA8;
 const ARC_SHEATH = 0x7AB6F7;
 const ARC_CORE = 0xEAF6FF;
 
+// ---------------------------------------------------------------- side sparks (user request)
+// The artwork paints a blue spark beside the outer tubes, and the user asked for it to be ANIMATED:
+// "the emitter on the side where the current blue spark emitter is ... fly off into the area above
+// the emitter beside the tubes, blue white sparks". So a burst emits from the painted spark's own
+// bright core (SPARK_X/SPARK_Y, generated into Layout.mc from the shipping frame) and its filaments
+// fan UPWARD beside the tubes, re-jittered every frame while the burst lasts. Same palette as the
+// bolts, which is also what the reference's sparks measure (core (149,191,233), tips (11,20,37)).
+const SPARK_UP = -90;            // screen degrees: straight up (screen y grows downward)
+const SPARK_BIAS = [-13, 13];    // per emitter: tilt slightly outward, away from its own tube
+const SPARK_LINES = 10;          // filaments per burst
+const SPARK_SPREAD = 32;         // half-angle of the fan, degrees, about straight up
+const SPARK_LEN_MIN = 22;        // filament length, screen px - reaches up beside the tube
+const SPARK_LEN_MAX = 70;
+const SPARK_ON_MIN = 1;          // frames a burst lasts (re-jittered every frame)
+const SPARK_ON_MAX = 4;
+const SPARK_OFF_MIN = 5;         // frames of quiet between bursts
+const SPARK_OFF_MAX = 22;
+
 //! The nixie discharge: arc flicker between the tube tips.
 //!
 //! Deterministic by design: a 31-bit LCG seeded once, advanced only by step(), so a given frame
@@ -42,6 +60,8 @@ class Discharge {
     private var _seed as Number;
     private var _timer as Array<Number>;   // frames left in the current on/off phase
     private var _on as Array<Boolean>;
+    private var _sparkTimer as Array<Number>;   // the side sparks' own on/off phases
+    private var _sparkOn as Array<Boolean>;
 
     function initialize() {
         _seed = 20261010;
@@ -51,13 +71,21 @@ class Discharge {
         for (var k = 0; k < ARC_AX.size(); k += 1) {
             _timer[k] = between(1, ARC_OFF_MAX);
         }
+        _sparkTimer = [0, 0];
+        _sparkOn = [false, false];
+        for (var k = 0; k < SPARK_X.size(); k += 1) {
+            _sparkTimer[k] = between(1, SPARK_OFF_MAX);
+        }
     }
 
-    //! The resting state: no arcs. Used whenever the animation is not running, so a once-a-minute
-    //! redraw never freezes a half-drawn strike on the screen.
+    //! The resting state: no arcs and no sparks. Used whenever the animation is not running, so a
+    //! once-a-minute redraw never freezes a half-drawn strike on the screen.
     function reset() as Void {
         for (var k = 0; k < _on.size(); k += 1) {
             _on[k] = false;
+        }
+        for (var k = 0; k < _sparkOn.size(); k += 1) {
+            _sparkOn[k] = false;
         }
     }
 
@@ -71,7 +99,7 @@ class Discharge {
         return lo + next() % (hi - lo + 1);
     }
 
-    //! Advance one frame: the arc state machines.
+    //! Advance one frame: the arc and spark state machines.
     function step() as Void {
         for (var k = 0; k < _timer.size(); k += 1) {
             _timer[k] -= 1;
@@ -81,9 +109,17 @@ class Discharge {
                                    : between(ARC_OFF_MIN, ARC_OFF_MAX);
             }
         }
+        for (var k = 0; k < _sparkTimer.size(); k += 1) {
+            _sparkTimer[k] -= 1;
+            if (_sparkTimer[k] <= 0) {
+                _sparkOn[k] = !_sparkOn[k];
+                _sparkTimer[k] = _sparkOn[k] ? between(SPARK_ON_MIN, SPARK_ON_MAX)
+                                             : between(SPARK_OFF_MIN, SPARK_OFF_MAX);
+            }
+        }
     }
 
-    //! Draw every active arc. Each call re-jitters the bolt, so a strike crackles while it lasts.
+    //! Draw every active arc and spark. Each call re-jitters them, so a strike crackles while it lasts.
     function draw(dc as Graphics.Dc) as Void {
         if (dc has :setAntiAlias) {
             dc.setAntiAlias(true);
@@ -93,10 +129,50 @@ class Discharge {
                 drawArc(dc, k);
             }
         }
+        for (var k = 0; k < _sparkOn.size(); k += 1) {
+            if (_sparkOn[k]) {
+                drawSpark(dc, k);
+            }
+        }
         if (dc has :setAntiAlias) {
             dc.setAntiAlias(false);
         }
         dc.setPenWidth(1);
+    }
+
+    //! One side spark: SPARK_LINES filaments fanning UP from the painted spark's core, each with a
+    //! bend across its own path so it reads as a discharge rather than as a fan of straight lines,
+    //! drawn bloom (3 px) -> sheath (2 px) -> core (1 px), plus a small hot head at the emitter.
+    private function drawSpark(dc as Graphics.Dc, k as Number) as Void {
+        var ox = SPARK_X[k];
+        var oy = SPARK_Y[k];
+        var pens = [3, 2, 1];
+        var inks = [ARC_BLOOM, ARC_SHEATH, ARC_CORE];
+        for (var p = 0; p < 3; p += 1) {
+            dc.setPenWidth(pens[p]);
+            dc.setColor(inks[p], Graphics.COLOR_TRANSPARENT);
+            for (var i = 0; i < SPARK_LINES; i += 1) {
+                var deg = SPARK_UP + SPARK_BIAS[k]
+                          + (between(0, 2000) - 1000) * SPARK_SPREAD / 1000.0;
+                var rad = Math.toRadians(deg.toFloat());
+                var dx = Math.cos(rad);
+                var dy = Math.sin(rad);
+                var len = between(SPARK_LEN_MIN, SPARK_LEN_MAX).toFloat();
+                var kink = between(-5, 5).toFloat();
+                // bend perpendicular to the filament: (-dy, dx)
+                var mx = ox + dx * len * 0.55 - dy * kink;
+                var my = oy + dy * len * 0.55 + dx * kink;
+                var tx = ox + dx * len - dy * kink + between(-4, 4);
+                var ty = oy + dy * len + dx * kink;
+                dc.drawLine(ox, oy, mx, my);
+                dc.drawLine(mx, my, tx, ty);
+            }
+        }
+        dc.setPenWidth(1);
+        dc.setColor(ARC_CORE, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(ox, oy, 2);                    // the head: a bright 2 px pip
+        dc.setColor(ARC_BLOOM, Graphics.COLOR_TRANSPARENT);
+        dc.drawCircle(ox, oy, 4);
     }
 
     //! One bolt: 3 levels of midpoint displacement (9 points) perpendicular to the chord, plus
