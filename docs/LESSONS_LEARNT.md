@@ -160,8 +160,8 @@ one vision call judge a whole progression. **Judging N images in one contact she
 separate vision calls is the biggest token saver available.**
 
 **L29. Give children documents to READ, not text to parse.** Pasting the full technique guide into
-a task prompt costs thousands of tokens per child; writing it once to disk and saying "read
-`hybrid/research/TECHNIQUES_tube_and_socket.md`" costs ~20.
+a task prompt costs thousands of tokens per child; writing it once to disk and telling the
+child to read that file costs ~20.
 
 **L30. Have the creator run its own verification and self-check before the verifier sees anything.**
 The cheapest defect is the one caught in the same agent, in the same context, without a round trip.
@@ -386,8 +386,8 @@ identical pixel data, so compare against a fresh build of the current tree, not 
 **L53. Before a repo goes public, scan the HISTORY, not the tree — then decide what history to
 publish.** The working tree was clean, but `gitleaks detect` over all commits found the original
 signing key (`ciq/keys/developer_key.pem`, committed before its ignore rule existed). History
-also held a deleted third-party product photo (the Devon Tread 1 reference) and compiler
-intermediates whose paths embedded the Windows username. Deleting a file does not remove it from
+also held a deleted third-party product photo (a commercial watch kept only as a style reference) and
+compiler intermediates whose paths embedded the Windows username. Deleting a file does not remove it from
 history, and the key being void (it was regenerated) does not make publishing it acceptable. The
 user chose to publish a single fresh commit of the cleaned tree; the full private history is kept
 as a backup bundle outside the repo. The gates now match eClock: gitleaks + `detect-private-key`

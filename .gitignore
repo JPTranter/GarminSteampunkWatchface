@@ -16,17 +16,10 @@ venv/
 *.blend2
 blender.crash.txt
 
-# Render + measurement logs (the model's own reports are kept, these are scratch)
+# Render logs (the model's own reports are kept, these are scratch)
 log_*.txt
 render*.log
 batch_out.txt
-
-# Regenerable measurement overlays — the scripts and reports that produce them ARE kept,
-# so these can always be rebuilt with grid.py / measure*.py / verify*.py
-measure_overlay.png
-grid_overlay.png
-placement_check.png
-placement_check2.png
 
 # 4x supersampled render intermediates
 *_4x.png

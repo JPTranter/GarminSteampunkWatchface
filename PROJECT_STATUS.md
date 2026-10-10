@@ -8,10 +8,11 @@ returned all-approved verdicts in rounds 3, 4, 5 and 6), remaining 40 iterations
 available on request._
 
 *Note on paths: this document names the loop's own artifacts (`iterations/`, `reviews/`, `spikes/`,
-`reference/crops/`, `hybrid/FINAL_3D_face.png`) and one third-party reference photo
-(`reference/devon_tread1_steampunk.png`). They belong to the private pre-publication history and are
-deliberately not in this repo — see LESSONS L53 in [`docs/LESSONS_LEARNT.md`](docs/LESSONS_LEARNT.md).
-The layout that actually shipped is [`ciq/LAYOUT.md`](ciq/LAYOUT.md).*
+`reference/crops/`) and one third-party reference photo. They belong to the private
+pre-publication history and are deliberately not in this repo — see LESSONS L53 in
+[`docs/LESSONS_LEARNT.md`](docs/LESSONS_LEARNT.md). The layout that actually shipped is
+[`ciq/LAYOUT.md`](ciq/LAYOUT.md); the abandoned 3D/component loop is recorded in
+[`docs/component-review-log.md`](docs/component-review-log.md).*
 
 ## Deliverable
 Steampunk watch-face mockups, 320 x 360 PNG, one per iteration, for the Garmin Venu Sq 2
@@ -39,7 +40,7 @@ fresh directions. Loop ends on APPROVED against the enhanced bar, or at iteratio
 | 4 | 031-040 | B (blueprint) | **ALL 10 APPROVED**. Blueprint matched: 4 tubes, manifold, heart gauge + odometer + weekday-ring date dial. Best: `iter_036` (40/40, time 15.9-16.1:1) |
 | 5 | 041-050 | B (close 3 gaps) | **ALL 10 APPROVED**. Bolts 4 px median run (from 13-16), HR fill gauge 40 %, date hand on WE, 7/7 weekdays. Best: `iter_046` |
 | 6 | 051-060 | B (arc realism) | **ALL 10 APPROVED**. Gutters 10→21-28 px, bolts verified blue-white spidery, chart halo proven removed. Best: `iter_060` |
-| 7 | 061-070 | 3D component-first | Real-geometry components built and iterated; **assembled into one scene**. Final: `hybrid/FINAL_3D_face.png` |
+| 7 | 061-070 | 3D component-first | Real-geometry components built and iterated; **assembled into one scene** (the renders stayed in the private pre-publication history) |
 
 ## 3D phase outcome — components iterated, then assembled
 Method the user set: **component-first, review after every iteration, learn each component's skills
@@ -52,12 +53,14 @@ before moving on, sparks last.** Every iteration is on disk as an image with a r
 | heart gauge | Brass bezel, black dial, graduated arc with ticks, blue segment, -40/180 labels, red heart needle on a boss | 13 |
 | date gauge | Weekday ring, red hand, day-number position | 4 |
 | step counter | Brass frame, five drums, divider bars, glass | 1 |
-| **assembly** | All five in ONE scene at 320x360 — `hybrid/FINAL_3D_face.png` | 2 |
+| **assembly** | All five in ONE scene at 320x360 | 2 |
 
-**Deliverables:** `hybrid/FINAL_3D_face.png` (320x360) and `FINAL_3D_face_2x.png`;
-`hybrid/attempts/REVIEW.md` (per-iteration reviews and lessons); `hybrid/research/` (three sourced
-technique guides); `hybrid/batch.py` (serial attempt runner + comparison sheets);
-`docs/LESSONS_LEARNT.md` (project-wide, including the token/time-efficiency rules).
+**Deliverables of that phase,** all of which stayed in the private pre-publication history: the
+assembled scene at 320x360 and 2x, the per-component attempts with their reviews, the serial
+attempt runner, and three sourced technique guides. What this repo keeps of it is
+[`docs/component-review-log.md`](docs/component-review-log.md) (the per-iteration reviews) and
+[`docs/LESSONS_LEARNT.md`](docs/LESSONS_LEARNT.md) (project-wide, including the token/time-efficiency
+rules).
 
 **Honest standing vs the reference:** structure and materials match well; *drama* does not yet. The
 reference's tubes are larger relative to the frame and filled with a bright blue-white discharge, its
@@ -76,12 +79,12 @@ The user asked for the face rendered **in real 3D in Blender**, as close as poss
 element (gauges, needles, weekday letters, labels, drums, rails, cogs) must be real geometry.
 
 Two spikes established the approach and are worth reading before touching this:
-- `spikes/001-blender-cycles-photoreal/README.md` — all-in-Cycles fails on the data: a
+- [`docs/spike-notes/001-blender-cycles-photoreal.md`](docs/spike-notes/001-blender-cycles-photoreal.md) — all-in-Cycles fails on the data: a
   self-luminous datum cannot hold the contrast bar (best 2.9:1 vs 12:1 required), because AgX
   compresses emissive glyphs while Standard clips them into their own bloom, and glass refraction
   smears a numeral behind it. Also documents the headless Blender traps (default startup Cube,
   relative render paths, axis-vs-depth, layer order, hollow tubes).
-- `spikes/002-hybrid-machine-plus-data/README.md` — Cycles machine layer + controlled data layer
+- [`docs/spike-notes/002-hybrid-machine-plus-data.md`](docs/spike-notes/002-hybrid-machine-plus-data.md) — Cycles machine layer + controlled data layer
   works: time digits went from 2.9:1 to 12.5-13.8:1 at the 6 px ring. Weak point moved from the
   renderer to the data design.
 
@@ -91,9 +94,9 @@ Two spikes established the approach and are worth reading before touching this:
    (+ gear train). Crops live in `reference/crops/`, cut by `reference/cut_components.py`.
 2. **Learn each component's skills before moving on.** Study the crop, research or prototype any
    unfamiliar modelling technique, build, render, compare, iterate — and only then start the next.
-3. **Up to 50 attempts per component, every attempt stored as an image** in
-   `hybrid/attempts/<component>/attempt_NNN.png` with a `LOG.md` line per attempt. The image
-   trail is part of the deliverable; bad attempts are kept, not deleted.
+3. **Up to 50 attempts per component, every attempt stored as an image** with a log line per
+   attempt (that trail stayed in the private pre-publication history). The image trail is part
+   of the deliverable; bad attempts are kept, not deleted.
 4. **Sparks last.** No electric arcs in the component rounds — they render last, possibly via a
    Blender add-on, once the geometry underneath is right.
 
@@ -239,7 +242,7 @@ That gap is exactly what the user's next reference demanded, so round 4 targets 
    HR and steps per image.
 
 ## Strongest bases for Phase B
-- `iter_001_drum-openwork-hhmm.png` — closest to the user's Devon Tread 1 north star.
+- `iter_001_drum-openwork-hhmm.png` — closest to the user's original drum-window north star.
 - `iter_003_verdigris-panel.png` — highest measured readability total (34/40), but a flat
   instrument panel rather than a machine.
 - `iter_009_aged-ivory-panel.png` — largest digits (55 px), least contrast headroom.
@@ -259,6 +262,6 @@ Lessons encoded in the engine:
 - Use **`/c/Python314/python.exe`** — the bare `python` on PATH is a broken shim (exit 127).
 
 ## Reference
-`reference/devon_tread1_steampunk.png` — Devon Tread 1 Steampunk: rectangular case,
-riveted brass rails, open-work mechanism behind glass, white-on-black drum digits with
-engraved letterspaced brass labels, ruled belt tick scales. The user's style north star.
+`reference/BrassBackground.png` — the artwork the shipped face is built from.
+`reference/nixie_moodboard_arcs.png` — the mood board the finished face was matched to.
+The third-party product photo that set the original style direction is kept outside this repo.

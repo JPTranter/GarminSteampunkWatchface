@@ -2,7 +2,7 @@
 
 *Historic record of the 3D/Blender component loop that was explored before the shipped face (see
 [`PLAN_3D_AND_DEPLOYMENT.md`](../PLAN_3D_AND_DEPLOYMENT.md)). The render paths it names
-(`hybrid/attempts/`, `reference/crops/`, `nixie_top_view.png`) belong to the private
+(`reference/crops/`, `nixie_top_view.png`) belong to the private
 pre-publication history and are not in this repo — the reason is LESSONS L53.*
 
 Process change: one render, then a review of *that* render, then one specific change. No numbers or
@@ -135,7 +135,7 @@ ignored anyway — the rotation is hardcoded in the lighting tuple, only the pos
 A defect that survives two targeted fixes means the cause has not been identified yet.
 
 **The actual cause was LAYER ORDERING** — the same family as the digits-buried-in-their-own-plate bug
-in the earlier hybrid spike:
+in the earlier spike render:
 - `rail` box spans y **0.075 … 0.205** (layer 0.14, depth 0.13).
 - `rail_face` sat at layer 0.16 and the bolt heads at 0.10 — both **inside the box**, therefore
   invisible.

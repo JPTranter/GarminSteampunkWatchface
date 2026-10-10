@@ -72,9 +72,10 @@ The design came out of a long render loop before any watch code existed:
 - concept sweeps scored against a readability rubric ([`SPEC.md`](SPEC.md),
   [`PROJECT_STATUS.md`](PROJECT_STATUS.md));
 - Blender Cycles spikes ([`docs/spike-notes/`](docs/spike-notes/)), which showed that photoreal
-  glass and legible data fight each other;
-- sourced technique notes ([`hybrid/research/`](hybrid/research/));
-- an HTML model on the measured artwork ([`hybrid/web/`](hybrid/web/)).
+  glass and legible data fight each other.
+
+The 3D route those spikes explored was set aside: the face ships from a fitted 2D artwork
+pipeline, whose every coordinate is in [`ciq/LAYOUT.md`](ciq/LAYOUT.md).
 
 ## Artwork
 

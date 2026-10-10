@@ -98,13 +98,13 @@ this bar is the exact target: aim at it and stop when it is reached. Style polis
 the bar is explicitly optional and must not be pursued at the cost of the loop's budget.
 
 ## Style north star (set by the user)
-`reference/devon_tread1_steampunk.png` — a Devon Tread 1 Steampunk wristwatch: rectangular
-case, riveted brass rails top and bottom, open-work mechanism behind a glass crystal, huge
-white/ivory digits on black rotating drums with engraved letterspaced brass labels
-(HOUR / MINUTE / SECONDS) on riveted plates, fine ruled tick scales along the belt tracks,
-deep inter-layer shadows, brass reading as real metal.
+A steampunk wristwatch the user pointed at as the reference (a third-party product photo, kept
+outside this repo): rectangular case, riveted brass rails top and bottom, open-work mechanism
+behind a glass crystal, huge white/ivory digits on black rotating drums with engraved
+letterspaced brass labels (HOUR / MINUTE / SECONDS) on riveted plates, fine ruled tick scales
+along the belt tracks, deep inter-layer shadows, brass reading as real metal.
 
-**Study that image before designing.** The open-work drum-window family is the priority
+**Study the described direction before designing.** The open-work drum-window family is the priority
 direction; an enamel analog dial is acceptable but scores lower on steampunk alignment.
 The most readable presentation of the time is a large white-on-black drum window — the
 rubric scores that channel generously (see rubric §1.1b), so use it when the composition
