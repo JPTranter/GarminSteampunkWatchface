@@ -533,3 +533,19 @@ Consequences worth keeping:
   in `INK_TIME`. (Same finding as L63's separator dots, from the other direction.)
 - **`thin`/`thick` are one argument each on the font generator**, so going back is a one-line change
   plus `make.py assets`, not a redesign.
+
+**L65. Two readability fixes that were geometry and rendering, not colour.** The user asked for "at
+least one more vertical pixel between the numbers of each digit on the steps count" and for the
+weekday and month names on the dial ring to be bold.
+
+- **Belt spacing is a layout constant with a readability floor.** `BELT_PITCH` was 30 px with 28 px
+  digits on the belt — a 2 px gap — so the window's top and bottom edges showed a fat sliver of the
+  neighbouring numeral, which reads as broken digits rather than as a belt. At 32 px the gap is 4 px
+  and the window holds the numeral cleanly. The pitch is one number in `prepare_artwork.py`
+  (`BELT_PITCH_SRC`), generated into `Layout.mc`, and both the view's roll animation and the preview
+  read it from there.
+- **Bold by STROKE, not by adding a font.** The ring's WED / SEP are Georgia glyphs rendered at a
+  ~10 px cap into opaque patches; L56 already flags the rasterised Windows faces as a licensing grey
+  area, so the fix was an outline on the same glyph (`stroke_width` at SS x = 0.8 px at final size)
+  rather than bolting on Georgia Bold. At a 10 px cap that takes Georgia's ~1.2 px stems to ~2 px —
+  the difference between a leaping word and a smudge on the wrist.
