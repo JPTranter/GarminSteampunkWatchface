@@ -22,6 +22,12 @@ const HR_Y = 267;
 const DAY_X = 282;
 const DAY_Y = 276;
 
+// The hours/minutes separator (two lit dots in the tube 2 / tube 3 gap).
+const SEP_X = 158;
+const SEP_Y = 97;
+const SEP_DY = 7;
+const SEP_R = 2;
+
 // Arc channels (Discharge.mc): tube-tip knobs, and the dark band the bolts must stay inside.
 const ARC_AX = [59, 131, 198, 49, 269];
 const ARC_AY = [13, 13, 13, 13, 13];

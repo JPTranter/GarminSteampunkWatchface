@@ -38,7 +38,8 @@ W, H = 320, 360
 
 
 # ---------------------------------------------------------------- the view's own constants
-def parse_constants(paths=(SOURCE, os.path.join(HERE, "source", "Discharge.mc"),
+def parse_constants(paths=(SOURCE, os.path.join(HERE, "source", "TubeInk.mc"),
+                           os.path.join(HERE, "source", "Discharge.mc"),
                            os.path.join(HERE, "source", "DateRing.mc"),
                            os.path.join(HERE, "source", "HrGauge.mc"),
                            os.path.join(HERE, "source", "Layout.mc"))):
@@ -255,6 +256,18 @@ def belt_digits(face, consts, font, frm, to, phase):
         del win
 
 
+def separator(canvas, consts, discharge=None):
+    """Mirror of SteampunkNixieView.drawSeparator/litDot: two solid dots in the digits' own ink, no
+    glow ring (the separator is a lamp in the gap, not a glyph, so it takes no part in the pulse)."""
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(canvas)
+    r = consts["SEP_R"]
+    for dy in (-consts["SEP_DY"], consts["SEP_DY"]):
+        y = consts["SEP_Y"] + dy
+        d.ellipse([consts["SEP_X"] - r, y - r, consts["SEP_X"] + r, y + r],
+                  fill=rgb(consts["INK_TIME"]))
+
+
 def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, background=None,
            belt=None):
     consts = consts or parse_constants()
@@ -285,6 +298,7 @@ def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, backgro
     for i, d in enumerate("%02d%02d" % (hh, mm)):
         # The glow is painted back-to-front: far ring, near ring, then the core glyph on top.
         glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], i, discharge)
+    separator(face, consts, discharge)          # the hours/minutes colon, as the view draws it
 
     frm, to, phase = belt if belt else (belt_text(steps), belt_text(steps), 0)
     belt_digits(face, consts, f_step, frm, to, phase)
@@ -365,7 +379,7 @@ if __name__ == "__main__":
     print(f"{args.out}  {face.size[0]}x{face.size[1]}")
     for name, font, y, cols in (("time", "NixieTime", consts["TIME_Y"], 4),
                                 ("heart rate", "NixieMid", consts["HR_Y"], 2),
-                                ("steps", "NixieStep", consts["STEP_Y"][0], 4),
+                                ("steps", "NixieStep", consts["STEP_Y"], 4),
                                 ("day number", "NixieDay", consts["DAY_Y"], 2),
 ):
         f = Font(font)

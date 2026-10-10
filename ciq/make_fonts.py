@@ -19,7 +19,7 @@ import prepare_artwork
 _G = prepare_artwork.geometry()
 TOP_K, BOT_K = _G["TOP_K"], _G["BOT_K"]
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "resources", "fonts")
@@ -29,8 +29,13 @@ SERIF_BD = r"C:\Windows\Fonts\timesbd.ttf"
 SERIF = r"C:\Windows\Fonts\georgia.ttf"
 
 
-def render_glyph(ch, px, condense, source=SERIF_BD):
-    """Render one glyph to a tight grayscale mask, condensed horizontally."""
+def render_glyph(ch, px, condense, source=SERIF_BD, thin=0):
+    """Render one glyph to a tight grayscale mask, condensed horizontally.
+
+    `thin` erodes the stroke by that many px on each side (MinFilter + a small blur to put the
+    anti-aliasing back): the tube digits are a single wire cathode, and Nixie One's strokes are
+    ~2x heavier than the wire in the user's reference photograph.
+    """
     f = ImageFont.truetype(source, px)
     pad = 6
     canvas = Image.new("L", (px * 3, px * 3), 0)
@@ -42,15 +47,17 @@ def render_glyph(ch, px, condense, source=SERIF_BD):
     if bbox is None:
         return None
     g = canvas.crop(bbox)
+    if thin > 0:
+        g = g.filter(ImageFilter.MinFilter(2 * thin + 1)).filter(ImageFilter.GaussianBlur(0.5))
     w = max(1, int(round(g.width * condense)))
     return g.resize((w, g.height), Image.LANCZOS)
 
 
-def build(name, specs, px, condense, source=SERIF_BD, tracking=1):
+def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0):
     """specs: list of (char, codepoint). Packs glyphs left-to-right, wrapping at 512 px."""
     glyphs = []
     for ch, cp in specs:
-        g = render_glyph(ch, px, condense, source)
+        g = render_glyph(ch, px, condense, source, thin)
         if g is not None:
             glyphs.append((ch, cp, g))
     if not glyphs:
@@ -116,8 +123,10 @@ def px_for_ink(source, ink):
     return round(200 * ink / (bb[3] - bb[1]))
 
 
+# NixieTime is THINNED to a wire: `thin=1` takes 1 px off each side of the stroke, which turns
+# Nixie One's ~5-6 px stems into the ~3 px single-wire cathode of the reference photograph.
 t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
-                          condense=0.80, source=NIXIE_ONE)    # ~75 px digits, tubes
+                          condense=0.80, source=NIXIE_ONE, thin=1)   # ~75 px digits, tubes
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.

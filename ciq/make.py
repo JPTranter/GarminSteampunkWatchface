@@ -37,8 +37,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 PRODUCTS = ["venusq2m", "venusq2"]      # venusq2m = the user's watch (006-B4116-00)
 WATCH = "venusq2m"
-ASSETS = ["prepare_artwork.py", "prepare_resources.py", "hr_gauge.py", "make_date_ring.py",
-          "make_fonts.py"]
+ASSETS = ["prepare_artwork.py", "tube_colour.py", "prepare_resources.py", "hr_gauge.py",
+          "make_date_ring.py", "make_fonts.py"]
 
 
 def sdk_bin():

@@ -93,6 +93,31 @@ def load_clean_source():
 # rectangles on the 1024 grid (walls measured on tube 2: +-64.5 src), down to just above the
 # brass collars, so the collars, manifold and dials are untouched.
 TUBE_X_SRC = [282.3, 439.8, 579.5, 745.9]
+# The haze the digit throws into the glass, and the specular streak. Both follow the discharge's
+# colour: the tubes lit BLUE while the digits were blue (the tube_colour target set), so these
+# move together with ciq/source/TubeInk.mc - a warm digit inside cool glass clashes visibly.
+GLASS_HAZE_RGB = (0.62, 0.26, 0.06)
+GLASS_SPEC_RGB = (1.0, 0.94, 0.86)
+# The anode grid: real nixie tubes show a hexagonal metal mesh in front of the cathode, and the
+# user's reference photo reads as much by its honeycomb as by its colour. 0 = off. Visibility
+# follows the digit's own haze (MESH_GAIN), so the mesh lights up with the glow instead of being a
+# uniform printed texture.
+MESH_ALPHA = 0.55
+MESH_RGB = (1.0, 0.72, 0.42)
+MESH_R_SRC = 5.35                # hexagon circumradius on the 1024 grid (~14 cells across a tube)
+MESH_W_SRC = 0.6                 # wire width, source px (drawn supersampled, see _hex_mesh)
+MESH_SS = 6                      # supersampling factor for the mesh mask
+MESH_GAIN = 1.6                  # how strongly the local haze brightens the mesh
+MESH_BASE = 0.10                 # how visible the mesh is away from the glow
+# The wires can be drawn either as light added to the glass (glow, the reference's own look on its
+# bright glass) or as an OCCLUDER that darkens the glass behind them. Darkening is what buys digit
+# contrast on our near-black glass, so it is the default; MESH_RGB is unused in that mode.
+MESH_DARKEN = 1.0
+# How much the tube's interior glass is LIT (0 = the current near-black glass). The reference
+# photo's tubes are bright amber, interior luminance ~0.33 against a 0.89 digit - which is what
+# actually makes that picture read as it does, far more than the mesh.
+TUBE_LIFT = 0.0
+TUBE_LIFT_RGB = (1.0, 0.62, 0.30)
 TUBE_HALF_W_SRC = 72            # +-64.5 walls + edge anti-aliasing
 TUBE_WALL_SRC = 64.5
 TUBE_Y0_SRC, TUBE_Y1_SRC = 55, 335    # nipple tip .. just above the collar
@@ -109,6 +134,40 @@ def _tube_mask(w, h):
     for cx in TUBE_X_SRC:
         m = np.maximum(m, np.clip((TUBE_HALF_W_SRC - np.abs(xx - cx)) / 4, 0, 1) * vy)
     return m
+
+
+def _hex_mesh(w, h):
+    """An alpha mask of a flat-top honeycomb (the nixie anode grid), or None when MESH_ALPHA is 0.
+
+    Drawn supersampled (MESH_SS) and downsampled, because a mesh fine enough to read as the
+    reference photograph's texture is 1-2 source px per wire - drawn at 1:1 it either vanishes or
+    turns into stair-steps. Only the columns that can land inside a tube are visited.
+    """
+    if MESH_ALPHA <= 0:
+        return None
+    import math
+
+    from PIL import ImageDraw
+    ss = MESH_SS
+    W, H = w * ss, h * ss
+    mask = Image.new("L", (W, H), 0)
+    d = ImageDraw.Draw(mask)
+    r = MESH_R_SRC * ss
+    dy = math.sqrt(3.0) * r
+    wdt = max(1, round(MESH_W_SRC * ss))
+    for col in range(-2, int(W / (1.5 * r)) + 2):
+        cx = 1.5 * r * col
+        # skip columns that cannot reach any tube (the mask is only used inside the tubes)
+        if not any(abs(cx / ss - t) < TUBE_HALF_W_SRC + 2 * MESH_R_SRC for t in TUBE_X_SRC):
+            continue
+        for row in range(-2, int(H / dy) + 2):
+            cy = dy * (row + 0.5 * (col % 2))
+            pts = [(cx + r * math.cos(math.radians(60 * k)),
+                    cy + r * math.sin(math.radians(60 * k))) for k in range(6)]
+            for k in range(6):
+                d.line([pts[k], pts[(k + 1) % 6]], fill=255, width=wdt)
+    mask = mask.resize((w, h), Image.LANCZOS)
+    return np.asarray(mask, np.float32) / 255.0
 
 
 def glass_tubes(src):
@@ -134,8 +193,19 @@ def glass_tubes(src):
                                 + ((yy - (TUBE_DOME_Y_SRC + 8)) / 7) ** 2))      # dome hotspot
         haze += 0.30 * np.exp(-(((xx - cx) / 48) ** 2 + ((yy - 255) / 85) ** 2))
     m = _tube_mask(w, h)
-    out = base + (haze * m)[..., None] * np.array([0.10, 0.32, 0.62], np.float32)
-    light = (np.clip(spec, 0, 1) * m)[..., None] * np.array([0.82, 0.92, 1.0], np.float32)
+    out = base + (haze * m)[..., None] * np.array(GLASS_HAZE_RGB, np.float32)
+    if TUBE_LIFT > 0:
+        out = np.clip(out + (body * m * TUBE_LIFT)[..., None] * np.array(TUBE_LIFT_RGB, np.float32),
+                      0, 1)
+    mesh = _hex_mesh(w, h)
+    if mesh is not None:
+        gain = MESH_BASE + MESH_GAIN * np.clip(haze * 2.4, 0, 1)
+        wires = mesh * m * gain * MESH_ALPHA           # never shadow `a` (the source image)
+        if MESH_DARKEN > 0:
+            out = out * (1.0 - np.clip(wires * MESH_DARKEN, 0, 1))[..., None]   # wires occlude
+        else:
+            out = np.clip(out + wires[..., None] * np.array(MESH_RGB, np.float32), 0, 1)
+    light = (np.clip(spec, 0, 1) * m)[..., None] * np.array(GLASS_SPEC_RGB, np.float32)
     out = 1 - (1 - np.clip(out, 0, 1)) * (1 - light)                             # screen blend
     res = a * (1 - m[..., None]) + out * m[..., None]
     return Image.fromarray((np.clip(res, 0, 1) * 255).round().astype(np.uint8), "RGB")
@@ -242,6 +312,12 @@ def geometry(lay=SHIP):
     g["RING_CAP"] = RING_CAP_SRC * lay.sb
     g["TOP_K"] = lay.st / 0.49          # font scale vs the layout the font sizes were tuned on
     g["BOT_K"] = lay.sb / 0.43
+    # Hours/minutes separator: the colon sits in the tube 2 / tube 3 gap (the hour|minute
+    # boundary), exactly midway between their digit centres, at digit height.
+    g["SEP_X"] = (g["TIME_X"][1] + g["TIME_X"][2]) / 2.0
+    g["SEP_Y"] = g["TIME_Y"]
+    g["SEP_DY"] = 7
+    g["SEP_R"] = 2
     return g
 
 
@@ -274,6 +350,12 @@ const BELT_PITCH = {g["BELT_PITCH"]};
 const HR_Y = {round(hy + 0.5)};
 const DAY_X = {round(dx)};
 const DAY_Y = {round(dy + 0.5)};
+
+// The hours/minutes separator (two lit dots in the tube 2 / tube 3 gap).
+const SEP_X = {round(g["SEP_X"])};
+const SEP_Y = {g["SEP_Y"]};
+const SEP_DY = {g["SEP_DY"]};
+const SEP_R = {g["SEP_R"]};
 
 // Arc channels (Discharge.mc): tube-tip knobs, and the dark band the bolts must stay inside.
 const ARC_AX = {lst(g["ARC_AX"])};

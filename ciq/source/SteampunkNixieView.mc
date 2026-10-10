@@ -15,16 +15,13 @@ import Toybox.WatchUi;
 // change never means hand-editing coordinates here. See ciq/LAYOUT.md for how each was
 // measured. The gauge geometry is in HrGauge.mc, the date ring in DateRing.mc.
 
-// Nixie discharge blue, with the two halo rings that make it read as a glow. drawText has no alpha
-// and a bitmap font cannot be blurred, so the halo is solid pixels painted 1 and 3 px out in
-// progressively dimmer blues, under a brighter core. The rings step ~30 % and ~10 % of the core's
-// luminance, which is what turns a hard outline into a bloom.
-const INK_TIME = 0xEAF6FF;   // time core: bright, near-white blue — must stay clearly crisper than
-                             // the halo, or the glyph dissolves into its own glow and reads soft
-const INK_GLOW1 = 0x2F6EA8;  // inner halo ring
-const INK_GLOW2 = 0x15334F;  // outer halo ring
+// The nixie discharge's ink lives in the GENERATED source/TubeInk.mc (ciq/tube_colour.py), because a
+// colour drawn live must go through the same AMOLED pre-correction as the baked artwork: INK_TIME is
+// the glyph core (warm white-peach, carries the contrast), INK_GLOW1 the ring nearest the glyph
+// (deep, so the wire keeps a crisp dark edge) and INK_GLOW2 the outer bloom. drawText has no alpha
+// and a bitmap font cannot be blurred, so a glow can only be painted as solid offsets of the glyph.
 const GLOW_RAD1 = 1;
-const GLOW_RAD2 = 3;         // was 2: the halo scales with the 1.46x tube digit
+const GLOW_RAD2 = 1;         // == GLOW_RAD1: ONE ring (the view skips the outer pass entirely)
 
 const INK_IVORY = 0xFFF3D8;  // backlit counter and gauges
 const BELT_FRAMES = 6;       // a step digit's roll: 6 animation ticks = 0.6 s
@@ -191,6 +188,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
             _discharge.draw(dc);  // in the dark band above the domes: clear of every readout
         }
         drawTime(dc);
+        drawSeparator(dc);
         drawSteps(dc);
         drawHeartRate(dc);
         drawDate(dc);
@@ -211,16 +209,19 @@ class SteampunkNixieView extends WatchUi.WatchFace {
                     Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    //! Nixie discharge: the glyph in blue with a two-ring halo bloom.
+    //! Nixie discharge: the glyph in one bright ring with a hot core on top.
     //!
     //! drawText has no alpha and a bitmap font cannot be blurred, so a glow can only be painted as
-    //! solid offsets of the same glyph in dimmer blues. The far ring goes down first so the near
-    //! ring, and then the core, overwrite it — drawing them the other way round leaves the dim
-    //! ring on top and the digit reads as an outlined, unlit glyph. The halo rings take this
-    //! tube's pulse (Discharge.haloColour); the core never changes, so contrast is constant.
+    //! solid offsets of the same glyph. The far ring goes down first so the near ring, and then the
+    //! core, overwrite it — drawing them the other way round leaves the dim ring on top and the digit
+    //! reads as an outlined, unlit glyph. The ring takes this tube's pulse (Discharge.haloColour); the
+    //! core never changes, so contrast is constant. GLOW_RAD2 == GLOW_RAD1 means ONE ring: painting the
+    //! outer one as well would cost 8 more glyph blits per digit per frame for no visible change.
     private function glowing(dc as Graphics.Dc, tube as Number, x as Number, y as Number,
                              font as Graphics.FontType, text as String) as Void {
-        drawHalo(dc, x, y, font, text, GLOW_RAD2, _discharge.haloColour(tube, INK_GLOW2));
+        if (GLOW_RAD2 != GLOW_RAD1) {
+            drawHalo(dc, x, y, font, text, GLOW_RAD2, _discharge.haloColour(tube, INK_GLOW2));
+        }
         drawHalo(dc, x, y, font, text, GLOW_RAD1, _discharge.haloColour(tube, INK_GLOW1));
         centred(dc, x, y, font, text, INK_TIME);
     }
@@ -252,6 +253,21 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         for (var i = 0; i < 4; i += 1) {
             glowing(dc, i, TIME_X[i], TIME_Y, fontTime(), digits[i].toString());
         }
+    }
+
+    //! The hours/minutes separator: two solid dots in the tube 2 / tube 3 gap, at digit height, in
+    //! the digits' own ink (no glow ring). The frame's artwork has no colon of its own and the device
+    //! cannot rotate or scale text, so the separator has to be drawn.
+    private function drawSeparator(dc as Graphics.Dc) as Void {
+        litDot(dc, SEP_X, SEP_Y - SEP_DY, SEP_R);
+        litDot(dc, SEP_X, SEP_Y + SEP_DY, SEP_R);
+    }
+
+    //! One lit dot: the digits' own ink, solid, with NO glow ring — the separator is a lamp in the
+    //! gap, not a glyph, and the user asked for it plain.
+    private function litDot(dc as Graphics.Dc, x as Number, y as Number, r as Number) as Void {
+        dc.setColor(INK_TIME, Graphics.COLOR_TRANSPARENT);
+        dc.fillCircle(x, y, r);
     }
 
     //! The step counter: five drums whose digits sit on vertical belts. Each window shows its
