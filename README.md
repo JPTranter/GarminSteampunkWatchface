@@ -21,8 +21,9 @@ tips every time you raise your wrist.**
 
 ## Features
 
-- **Nixie-tube time**: thin, wire-like digits (Nixie One) burning hot orange inside clear **amber
-  glass** envelopes lined with a honeycomb anode grid. The glow is steady — it does not pulse.
+- **Nixie-tube time**: thin, wire-like digits (Nixie One) burning white-hot inside clear **amber
+  glass** envelopes lined with a honeycomb anode grid, each stroke rimmed and haloed in orange. The
+  glow is steady — it does not pulse.
 - **Colon separator**: two lit dots between the hours and the minutes, in the digits' own orange.
 - **Electric arcs and side sparks**: arcs jump between the tube tips and blue-white sparks crackle
   up the outside of the two outer tubes, for the ~10 s after a wrist raise. The animation runs only
