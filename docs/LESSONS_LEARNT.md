@@ -435,3 +435,37 @@ times a heredoc-wrapped Python edit turned `"\n"` into a real newline inside a s
 and the edited file stopped compiling. A script written with the file tool and then run is
 literal, re-runnable and reviewable, and its `assert s.count(a) == 1` per edit catches a stale
 anchor before anything is half-applied.
+
+**L59. DECISION — hot orange tubes with a honeycomb anode grid, and a thin wire for the digits
+(user-approved; candidates in `ciq/artwork/tube_restyle_candidates.png`, stroke test in
+`ciq/artwork/tube_restyle_stroke.png`).** The face shipped blue digits in cool glass; the user's
+reference photographs were orange, so the ink, the glass and the digits' weight all moved. Every
+value came from measuring the reference rather than eyeballing it: the wire is a hot yellow-white
+core (`(252,226,150)`; the photo measures `(236,225,139)` at luminance 0.87) inside ONE bright
+orange ring `(255,118,38)`; the glass haze went warm `(0.62,0.26,0.06)` with a warm specular; the
+anode grid is a hex lattice at 16 cells across a tube. Two findings worth keeping:
+
+- **A mesh must occlude, not glow.** Drawn additively the honeycomb *cost* digit contrast (2.8 →
+  2.0 on the same core-vs-glass measure) because it added light under the glyph. Drawn as a
+  multiply occluder it gave the contrast back (2.8) and reads as wire mesh rather than a printed
+  pattern. Reference and readability were not in conflict here: the photo's own digit-vs-glass
+  ratio is ~2.8 and the face sits in the same band.
+- **Two halo rings read as "complex shading"; the reference has one.** `GLOW_RAD2 == GLOW_RAD1`
+  makes `glowing()` skip the outer pass entirely — one ring, and 8 fewer glyph blits per digit per
+  frame. A drawn glow is solid offsets of the glyph, so each extra ring is real per-frame cost.
+
+Stroke weight is a FONT property, not an ink one: Nixie One's stems are ~2x the thickness of the
+reference's wire, so `make_fonts.py` takes a `thin` argument (erode 1 px per side, then a 0.5 px
+blur to put the anti-aliasing back). 2 px per side starts eating the vertical stem of a `1`.
+
+**L60. DECISION — live-drawn ink is GENERATED (`source/TubeInk.mc`), because it must be
+pre-corrected exactly like the baked art.** The background is pre-corrected once by
+`device_colour.correct()`; the digits are drawn live by `drawText`. While the ink was blue that
+mismatch did not matter — the correction's weight fades out below 340 deg and above 80 deg, so blue
+and the lamps were untouched. Orange sits exactly where the AMOLED shifts, so the shipping
+constants are now `device_colour.correct()` of the target colour measured off the reference, written
+by `ciq/tube_colour.py` into a generated `.mc` and wired into `make.py assets` — the same pattern as
+`HrGauge.mc`'s corrected segment table. Rule: a colour the watch draws live goes through the SAME
+correction as the artwork, and lives in a generated file so the two cannot drift. The separator
+(two solid dots in the digits' own ink, no glow ring) is drawn the same way, with its geometry
+generated into `Layout.mc`.

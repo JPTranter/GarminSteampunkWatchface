@@ -45,9 +45,16 @@ windows, the HR and day numbers, the arc channels. The HR gauge (`hr_gauge.py`),
 forward. Check: feeding layout C back through `geometry()` reproduces every hand-measured value
 that shipped on it, exactly. A zoom change is now the one `ST, SB, TOP_Y` line.
 
-The tube envelopes are re-lit as clear blue glass before the split (`glass_tubes`; see
-LESSONS L56), and the step counter now uses all **five** drum windows the art has (dividers at
-screen x 99 / 122 / 144 / 167 / 190 / 214, window y 229..267 on this frame).
+The tube envelopes are re-lit before the split (`glass_tubes`): the walls are re-lit as glass
+(see LESSONS L56), now with a **warm amber** haze and specular because the digits burn orange
+(LESSONS L59), plus a **hexagonal anode grid** — a real nixie's mesh, drawn as an occluder at
+`MESH_R_SRC` 5.35 on the 1024 grid (16 cells across a tube, `_hex_mesh`, supersampled). The step
+counter uses all **five** drum windows the art has (dividers at screen x 99 / 122 / 144 / 167 /
+190 / 214, window y 229..267 on this frame).
+
+The hours/minutes colon is DRAWN, not baked (nothing on the device rotates text, and the art has no
+colon): `SEP_X` 159 / `SEP_Y` 97 ± `SEP_DY` 7, `SEP_R` 2, in the tube 2 / tube 3 gap — all four
+generated into `source/Layout.mc`. Its ink comes from `source/TubeInk.mc` (LESSONS L60).
 
 ### The original uniform transform (history)
 

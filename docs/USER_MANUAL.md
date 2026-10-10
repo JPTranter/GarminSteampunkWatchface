@@ -16,7 +16,7 @@
 
 | Element | What it shows |
 |---|---|
-| Four nixie tubes | The time, as 24-hour `HH MM`, in thin glowing nixie digits. |
+| Four nixie tubes | The time, as 24-hour `HH MM`, in thin glowing orange nixie digits, with two lit dots between the hours and the minutes. |
 | Five drums | Today's step count, up to 99,999. The digits sit on belts; when the count changes while the screen is awake, each changed digit rolls down into place. |
 | Left gauge | Your current **heart rate**. The band is lit up to your rate in seven equal steps: 40–60 bpm (cold blue), 60 bpm to your zone 1 (green, a normal resting rate), then your five zones (green → yellow → orange → red). Your zones come from Garmin Connect (*User Settings → Heart Rate Zones*). |
 | Right dial | The **day** in the centre. The **weekday** is set into the ring above it and the **month** below, one letter per segment. |
