@@ -48,7 +48,8 @@ that shipped on it, exactly. A zoom change is now the one `ST, SB, TOP_Y` line.
 The tube envelopes are re-lit before the split (`glass_tubes`): the walls are re-lit as glass
 (see LESSONS L56) in **amber** — the base cast (`GLASS_CAST_RGB` 1.30 / 0.74 / 0.26, gamma 1.35)
 was the cool blue until the user's warm reference asked for the opposite, and the baked haze and
-specular were already warm because the digits burn orange (LESSONS L59, L67) — plus a
+specular were already warm because the digits burn orange (LESSONS L59, L67), and the haze the digit throws into it is tight (sigma 20 x 60 source px) so
+the tube stays dark away from the wire and the bloom reads as a bloom (LESSONS L69) — plus a
 **hexagonal anode grid** — a real nixie's mesh, drawn as an occluder at
 `MESH_R_SRC` 5.35 on the 1024 grid (16 cells across a tube, `_hex_mesh`, supersampled). The step
 counter uses all **five** drum windows the art has (dividers at screen x 99 / 122 / 144 / 167 /

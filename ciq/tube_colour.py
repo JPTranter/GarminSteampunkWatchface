@@ -43,8 +43,16 @@ INK_TARGET = {
     # nothing scales it. A 1 px halo around the glyph is most of what the digit's colour IS at this
     # size, so the ring, not the core, is what the digit reads as - it carries the reference's stroke
     # body colour, one step below the core.
-    "INK_GLOW1": (214, 120, 30),    # the single halo ring, at the bright baseline
-    "INK_GLOW2": (214, 120, 30),    # unused while GLOW_RAD1 == GLOW_RAD2 (the view skips the outer ring)
+    # The bloom is THREE stepped bands, because drawText has no alpha and a bitmap font cannot be
+    # blurred: a soft falloff can only be hand-painted as solid offsets of the glyph. Measured against
+    # the reference's own profile (ciq/ref_glow.py, converted to our px: L32 at 1.2 px out, L21 at 2.3,
+    # L15 at 4.0, L11 at 6.8, L3 at 11.4), this ladder plus the tightened glass haze lands at
+    # L26 / L16 / L12 / L11 - so the digits read as a glowing wire instead of a bright glyph on a
+    # washed-out tube. GLOW_RAD2 == GLOW_RAD1 would skip the middle band, and a radius equal to the
+    # next one inward is skipped in the same way.
+    "INK_GLOW1": (214, 120, 30),    # innermost band, against the glyph
+    "INK_GLOW2": (85, 22, 6),       # middle band: the reference's bloom at ~1-2 px out
+    "INK_GLOW3": (40, 11, 4),       # outer band: where it fades into the dark glass
 }
 
 
@@ -66,6 +74,7 @@ import Toybox.Lang;
 const INK_TIME = 0x{out['INK_TIME'][0]:02X}{out['INK_TIME'][1]:02X}{out['INK_TIME'][2]:02X};
 const INK_GLOW1 = 0x{out['INK_GLOW1'][0]:02X}{out['INK_GLOW1'][1]:02X}{out['INK_GLOW1'][2]:02X};
 const INK_GLOW2 = 0x{out['INK_GLOW2'][0]:02X}{out['INK_GLOW2'][1]:02X}{out['INK_GLOW2'][2]:02X};
+const INK_GLOW3 = 0x{out['INK_GLOW3'][0]:02X}{out['INK_GLOW3'][1]:02X}{out['INK_GLOW3'][2]:02X};
 """)
     print(f"wrote {os.path.relpath(GEN_MC, HERE)}  " + " ".join(
         f"{k}={v}" for k, v in out.items()))

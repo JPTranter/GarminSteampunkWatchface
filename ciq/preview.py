@@ -122,8 +122,13 @@ def ring(canvas, consts, font, text, x, y, radius, colour):
 
 
 def glowing(canvas, consts, font, text, x, y):
-    """Mirror of the view's glowing(): the two static halo rings (outer first) under the core. The
-    rings no longer pulse - the glow is a fixed bright baseline."""
+    """Mirror of the view's glowing(): the static halo rings (outer first) under the core. The rings
+    no longer pulse - the glow is a fixed bright baseline. Radius 3 is the outermost step of the
+    hand-painted bloom (drawText has no alpha, so a soft falloff can only be stepped bands); a radius
+    equal to the next one inward is skipped, exactly as the view skips it."""
+    r3 = consts.get("GLOW_RAD3", 0)
+    if r3 and r3 != consts["GLOW_RAD2"]:
+        ring(canvas, consts, font, text, x, y, r3, consts["INK_GLOW3"])
     if consts["GLOW_RAD2"] != consts["GLOW_RAD1"]:
         ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], consts["INK_GLOW2"])
     ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], consts["INK_GLOW1"])

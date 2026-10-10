@@ -17,11 +17,15 @@ import Toybox.WatchUi;
 
 // The nixie discharge's ink lives in the GENERATED source/TubeInk.mc (ciq/tube_colour.py), because a
 // colour drawn live must go through the same AMOLED pre-correction as the baked artwork: INK_TIME is
-// the glyph core (warm white-peach, carries the contrast), INK_GLOW1 the ring nearest the glyph
-// (deep, so the wire keeps a crisp dark edge) and INK_GLOW2 the outer bloom. drawText has no alpha
-// and a bitmap font cannot be blurred, so a glow can only be painted as solid offsets of the glyph.
-const GLOW_RAD1 = 1;
-const GLOW_RAD2 = 1;         // == GLOW_RAD1: ONE ring (the view skips the outer pass entirely)
+// the glyph core, and INK_GLOW1/2/3 are the bloom's three stepped bands. drawText has no alpha and a
+// bitmap font cannot be blurred, so a bloom can only be painted as solid offsets of the glyph.
+const GLOW_RAD1 = 1;         // innermost band, hard against the glyph
+const GLOW_RAD2 = 2;         // middle band: the reference's bloom about 1-2 px out (ciq/ref_glow.py)
+const GLOW_RAD3 = 3;         // outer band, fading into the dark glass; == GLOW_RAD2 skips it
+// Cost, because each band is solid glyph blits: radius r paints 8r of them per digit per frame, so
+// 1/2/3 costs 48 where the single ring cost 8, and each band is another drawText pass. What justified
+// it: the reference's falloff measures L32 one pixel out from its wire, L21 at two and L15 at four,
+// where the single ring jumped from L134 to a flat L17-23 wash across the tube.
 
 const INK_IVORY = 0xFFF3D8;  // backlit counter and gauges
 const BELT_FRAMES = 6;       // a step digit's roll: 6 animation ticks = 0.6 s
@@ -209,19 +213,23 @@ class SteampunkNixieView extends WatchUi.WatchFace {
                     Graphics.TEXT_JUSTIFY_CENTER);
     }
 
-    //! Nixie discharge: the glyph in one bright ring with a hot core on top.
+    //! Nixie discharge: the glyph in stepped bloom bands with a hot core on top.
     //!
-    //! drawText has no alpha and a bitmap font cannot be blurred, so a glow can only be painted as
-    //! solid offsets of the same glyph. The far ring goes down first so the near ring, and then the
-    //! core, overwrite it — drawing them the other way round leaves the dim ring on top and the digit
-    //! reads as an outlined, unlit glyph. The ring is a FIXED bright baseline now (user decision,
+    //! drawText has no alpha and a bitmap font cannot be blurred, so the bloom can only be painted as
+    //! solid offsets of the same glyph. The bands go down outermost first (GLOW_RAD3, then GLOW_RAD2,
+    //! then GLOW_RAD1), so each pass overwrites the inside of the one before it and the core lands on
+    //! top — the other way round leaves a dim band on top and the digit reads as an outlined glyph.
+    //! The glow is a FIXED bright baseline (user decision,
     //! LESSONS L63): it used to pulse with the discharge and flare when a spark struck, which cost a
     //! hue-preserving cap (L61) to keep it from going yellow for a glow nobody asked to move.
-    //! GLOW_RAD2 == GLOW_RAD1 means ONE ring: painting the outer one as well would cost 8 more glyph
-    //! blits per digit per frame for no visible change.
+    //! Two of the bands are redundant when their radii match: a pass whose radius equals the next one
+    //! inward only repaints the pixels that pass already covers, so it is skipped.
     private function glowing(dc as Graphics.Dc, x as Number, y as Number,
                              font as Graphics.FontType, text as String) as Void {
-        if (GLOW_RAD2 != GLOW_RAD1) {
+        if (GLOW_RAD3 > GLOW_RAD2) {
+            drawHalo(dc, x, y, font, text, GLOW_RAD3, INK_GLOW3);
+        }
+        if (GLOW_RAD2 > GLOW_RAD1) {
             drawHalo(dc, x, y, font, text, GLOW_RAD2, INK_GLOW2);
         }
         drawHalo(dc, x, y, font, text, GLOW_RAD1, INK_GLOW1);

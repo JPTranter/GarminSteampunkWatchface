@@ -5,4 +5,5 @@ import Toybox.Lang;
 
 const INK_TIME = 0xF5C534;
 const INK_GLOW1 = 0xD69E31;
-const INK_GLOW2 = 0xD69E31;
+const INK_GLOW2 = 0x55290E;
+const INK_GLOW3 = 0x281408;

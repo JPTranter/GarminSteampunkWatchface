@@ -93,11 +93,20 @@ def load_clean_source():
 # rectangles on the 1024 grid (walls measured on tube 2: +-64.5 src), down to just above the
 # brass collars, so the collars, manifold and dials are untouched.
 TUBE_X_SRC = [282.3, 439.8, 579.5, 745.9]
-# The haze the digit throws into the glass, and the specular streak. Both follow the discharge's
-# colour: the tubes lit from the digit's own amber, so these move together with ciq/source/TubeInk.mc
-# - a cool digit inside warm glass clashes visibly (and did, the other way round, when both were blue).
+# ---- the digits' haze: the baked half of the glow
+# The user: "It does not have a glowing orange effect like in the sample image." Measured off the
+# reference (ciq/ref_glow.py) in distance bands from the lit ink, converted to our pixels (its tube is
+# ~164 px across against our 60): 0.5 px out the glass sits at L111 - the wire's own halo - then L32
+# at 1.2 px, L21 at 2.3, L15 at 4.0, L11 at 6.8 and L3 at 11.4. The OLD haze (sigma 48 x 85 source px,
+# i.e. 22 x 40 screen px) holds L17-23 all the way out to 11 px: a broad wash that fills the tube
+# instead of a bloom around the wire, which is the opposite of the reference and is most of why the
+# digits do not read as glowing. A tight haze plus one painted outer ring (the view's GLOW_RAD2)
+# reproduces the measured falloff; the ring is live because it has to hug whatever glyphs are shown.
 GLASS_HAZE_RGB = (0.62, 0.26, 0.06)
 GLASS_SPEC_RGB = (1.0, 0.94, 0.86)
+GLASS_HAZE_AMP = 0.30           # peak of the digit's haze in the glass
+GLASS_HAZE_SIGMA = (20, 60)     # source px, x and y: tight around the digit, still taller than wide
+GLASS_HAZE_Y_SRC = 255.6        # the digit centre the haze is centred on (POINTS tube1..4)
 # The envelope's own CAST: a per-channel gain applied to the artwork's luminance. It replaced the AI
 # art's gold with a cool blue cast, and the user's reference (a warm amber tube render) then asked for
 # the opposite: the base chroma is what the PANEL re-lights, and the baked haze cannot re-tint the
@@ -178,6 +187,15 @@ def _hex_mesh(w, h):
     return np.asarray(mask, np.float32) / 255.0
 
 
+# ---- the digits' glow is NOT baked as a second layer
+# It was tried: a union of all ten glyphs at the shipping size, blurred, added to the glass. Measured,
+# it floods the digit BOX rather than hugging the glyphs - the ten digits overlap so heavily that the
+# union is a filled blob, and its profile held L61 at 2 px against the reference's L32, L21 at 2.3 and
+# L3 at 11. A bloom has to follow the strokes that are actually lit, and the strokes change every
+# minute, so the tight half of the glow is painted LIVE (the view's GLOW_RAD2 ring) and only the
+# broader haze above is baked.
+
+
 def glass_tubes(src):
     a = np.asarray(src, np.float32) / 255.0
     h, w = a.shape[:2]
@@ -199,7 +217,9 @@ def glass_tubes(src):
                         + g(cx + 0.97 * TUBE_WALL_SRC, 2.2)) * body              # rims
         spec += 0.75 * np.exp(-(((xx - cx) / 12) ** 2
                                 + ((yy - (TUBE_DOME_Y_SRC + 8)) / 7) ** 2))      # dome hotspot
-        haze += 0.30 * np.exp(-(((xx - cx) / 48) ** 2 + ((yy - 255) / 85) ** 2))
+        haze += GLASS_HAZE_AMP * np.exp(
+            -(((xx - cx) / GLASS_HAZE_SIGMA[0]) ** 2
+              + ((yy - GLASS_HAZE_Y_SRC) / GLASS_HAZE_SIGMA[1]) ** 2))
     m = _tube_mask(w, h)
     out = base + (haze * m)[..., None] * np.array(GLASS_HAZE_RGB, np.float32)
     if TUBE_LIFT > 0:

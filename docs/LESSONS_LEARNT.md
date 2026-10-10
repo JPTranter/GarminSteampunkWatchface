@@ -627,3 +627,27 @@ be animated.
   like a tuning bug rather than a mirror bug.
 - **Lifecycle unchanged**: 2 emitters x 10 filaments x 3 pen passes, drawn only while a burst is on,
   and only while the timer runs (high power, ~10 s after a wrist raise). Nothing animates in low power.
+**L69. "It does not have a glowing orange effect" is a complaint about the FALLOFF, not the colour - and
+a bloom has to follow the lit strokes.** After the ink was already the reference's own orange, the user
+still read the digits as flat: the missing thing was the way light leaves the wire.
+
+- **Measure the reference's radial profile, not its colour.** `ciq/ref_glow.py` masks the ink (bright,
+  saturated, warm), dilates it in steps and reports the median colour/luminance of each ring around it:
+  the reference sits at L111 at 0.5 of ITS px (the wire's own halo), L32 at 1.2, L21 at 2.3, L15 at
+  4.0, L11 at 6.8 and L3 at 11.4 - and its tube is ~164 px across against our 60, so divide those
+  distances by ~2.9 to get ours. That single measurement separates the two things a "glow" is made of:
+  a TIGHT bloom hugging the wire and a broad haze in the glass.
+- **The enemy was the haze, not the ink.** Our glass held L17-23 all the way out to 11 px - a wash that
+  fills the tube. Narrowing it (sigma 48x85 -> 20x60 source px) and adding painted bands reproduced
+  the reference's falloff (L26 / L16 / L12 / L11) and the digits started to read as glowing. A tube
+  that is lit everywhere is a tube with nothing glowing in it.
+- **A one-pixel ring cannot make a bloom, and baking one does not work either.** `drawText` has no
+  alpha, so a live glow is solid offsets of the glyph - the falloff can only be STEPS (radius 1/2/3
+  with three colours, 8r glyph blits per digit per frame each, so 1/2/3 costs 48 where one ring cost
+  8). The baked alternative was tried and measured: a union of all ten glyphs at the shipping size,
+  blurred, added to the glass - ten digits overlap so heavily that the union is a filled BLOB of the
+  digit box (L61 at 2 px where the reference is at 21-32), because a bloom has to follow the strokes
+  that are actually lit and those change every minute. Delete the dead knob when the bake loses.
+- **Judge it at 4x as well as at 1x.** Stepped bands can read as a blocky outline; at 4x the chosen
+  ladder showed a continuous halo, visible only because the bands are 1 px each and the glyph's shape
+  dominates. Cheap to check, and it is the difference between shipping a glow and shipping a border.
