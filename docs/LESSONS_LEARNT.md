@@ -482,3 +482,12 @@ keeps HEADROOM — it is the intended peak divided by `PULSE_MAX`, so 100 % rest
 and 120 % lands on it. Cost: the resting ring is 17 % dimmer than a ring stored at its own peak, and a
 flare can no longer exceed the peak (it saturates instead). Any pulsing colour needs that headroom
 designed in; a colour stored at its own maximum has nowhere to go but a hue shift.
+
+**L62. A generated asset has to follow the ink, not the build it was first made in.** The Connect IQ
+hero banner kept the blue background and blue neon title from the first (blue-ink) build, and its
+face was rendered before the L61 pulse fix, so the digits still flaunted the yellow overshoot the
+user had just flagged. Two rules came out of it: a banner's glow is the product's own colour (it is
+generated from `preview.py`'s frame, so it can only be as up to date as the last `make.py
+screenshots`), and **every regenerated asset must be re-run after a colour or pulse change**, not
+just after a layout change. The store upload set is the same story - it depicts a version, so it has
+to be rebuilt whenever that version's look moves.

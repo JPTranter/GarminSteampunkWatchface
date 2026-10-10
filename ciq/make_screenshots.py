@@ -43,13 +43,18 @@ def save_under(img, path, max_kb):
 
 def hero_banner(c):
     """1440x720 Connect IQ Store hero: the face (as seen, mid-strike) on the right, the title and
-    a tagline on the left over a soft blue glow. Text uses the OFL fonts in fonts-src/ only."""
+    a tagline on the left over a soft glow. Text uses the OFL fonts in fonts-src/ only.
+
+    The glow is the tubes' own ORANGE, not the old blue: the blue came from the blue ink of the
+    first build, and behind orange tubes it read as a different product. Digits and title now share
+    one hue.
+    """
     import numpy as np
     from PIL import ImageFilter, ImageFont
     W_, H_ = 1440, 720
     yy, xx = np.mgrid[0:H_, 0:W_].astype(np.float32)
     glow = np.exp(-(((xx - 1040) / 520) ** 2 + ((yy - 300) / 340) ** 2))
-    bg = np.stack([8 + 10 * glow, 10 + 26 * glow, 16 + 52 * glow], -1)
+    bg = np.stack([8 + 54 * glow, 10 + 24 * glow, 16 + 7 * glow], -1)
     img = Image.fromarray(bg.clip(0, 255).astype(np.uint8), "RGB")
 
     dis = preview.Discharge(c)
@@ -59,7 +64,7 @@ def hero_banner(c):
     face = face.resize((640, 720), Image.LANCZOS)
     x0 = 760
     # feather the face's left/right edges into the background (its own surround is black, so a
-    # hard paste leaves a visible panel edge against the blue gradient)
+    # hard paste leaves a visible panel edge against the gradient)
     fm = np.ones((720, 640), np.float32)
     ramp = np.linspace(0, 1, 40, dtype=np.float32)
     fm[:, :40] *= ramp[None, :]          # 40 px: wider fades the HR dial's first digit
@@ -78,15 +83,15 @@ def hero_banner(c):
     small_f = ImageFont.truetype(os.path.join(fonts, "oswald_Oswald[wght].ttf"), 26)
     small_f.set_variation_by_name("Light")
 
-    # title with the face's own nixie glow: blurred blue under a near-white core
+    # title with the face's own nixie glow: blurred orange under a hot near-white core
     t = Image.new("L", (W_, H_), 0)
     td = ImageDraw.Draw(t)
     td.text((70, 150), "Steampunk", font=title_f, fill=255)
     td.text((70, 272), "Nixie", font=title_f, fill=255)
-    for radius, colour in ((18, (40, 110, 200)), (6, (90, 170, 255))):
+    for radius, colour in ((18, (168, 62, 10)), (6, (255, 148, 48))):
         img = Image.composite(Image.new("RGB", (W_, H_), colour), img,
                               t.filter(ImageFilter.GaussianBlur(radius)).point(lambda v: min(255, v * 2)))
-    img = Image.composite(Image.new("RGB", (W_, H_), (234, 246, 255)), img, t)
+    img = Image.composite(Image.new("RGB", (W_, H_), (255, 232, 190)), img, t)
 
     d = ImageDraw.Draw(img)
     d.text((74, 430), "Glowing nixie tubes on a brass machine.", font=body_f, fill=(235, 214, 170))
