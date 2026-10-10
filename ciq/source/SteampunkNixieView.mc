@@ -10,29 +10,10 @@ import Toybox.UserProfile;
 import Toybox.WatchUi;
 
 // ---------------------------------------------------------------- layout
-// Every readout sits at a coordinate MEASURED on the artwork and transformed to the 320x360
-// screen by the SPLIT-SCALE layout (ciq/prepare_artwork.py, ciq/LAYOUT.md): the tubes band is
-// drawn at 0.49 and the dials/counter band at 0.43, joined under the manifold:
-//     top:    screen = ((src_x - 512) * 0.49 + 160, src_y * 0.49 - 29.4)
-//     bottom: screen = ((src_x - 512) * 0.43 + 160, (src_y - 506) * 0.43 + 218.5)
-// prepare_artwork.py prints this table; the source points carry the earlier hand nudges (HR up
-// off BPM, the date lines pushed off the dial rim), so they are not re-applied here.
-// These are centre points; the drawers below centre the glyph on them. Do not re-derive them by
-// eye on the small image — the two round dials sit at different heights on the artwork, which is
-// why the heart rate and the date are not at the same y.
-const TIME_X = [47, 125, 193, 275];
-const TIME_Y = 96;
-const STEP_X = [132, 157, 181, 206];
-const STEP_Y = [259, 255, 255, 255];
-// The heart-rate number sits alone on the zone gauge's centre (HRG_X, HRG_Y in the generated
-// HrGauge.mc: the dial face spans y 227..320); NixieMid's ink centre is 0.5 px above this y.
-// The BPM label was removed with the gauge (user request).
-const HR_Y = 274;
-// The day number sits alone on the date dial's centre, (288.1, 283.9) mapped from the source
-// (810, 658); NixieDay's ink centre is 0.5 px above the y passed to centred(). The weekday and
-// month are pre-rendered patches in the dial's ring: see make_date_ring.py / DateRing.mc.
-const DAY_X = 288;
-const DAY_Y = 284;
+// Every position (tube digits, step drums, the HR and day numbers, the arc channels) is
+// GENERATED into Layout.mc by ciq/prepare_artwork.py from the layout's scales, so a zoom
+// change never means hand-editing coordinates here. See ciq/LAYOUT.md for how each was
+// measured. The gauge geometry is in HrGauge.mc, the date ring in DateRing.mc.
 
 // Nixie discharge blue, with the two halo rings that make it read as a glow. drawText has no alpha
 // and a bitmap font cannot be blurred, so the halo is solid pixels painted 1 and 3 px out in
@@ -46,6 +27,7 @@ const GLOW_RAD1 = 1;
 const GLOW_RAD2 = 3;         // was 2: the halo scales with the 1.46x tube digit
 
 const INK_IVORY = 0xFFF3D8;  // backlit counter and gauges
+const BELT_FRAMES = 6;       // a step digit's roll: 6 animation ticks = 0.6 s
 const INK_SLEEP = 0x8A8A8A;  // deliberately dim for the burn-in-safe readout
 
 //! The steampunk nixie watch face.
@@ -63,6 +45,12 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     private var _fStep as Graphics.FontType or Null;
     // The user's heart-rate zone thresholds [z1 min, z1..z5 max] (UserProfile, read in onShow).
     private var _zones as Array<Number>;
+    // The step belts: the 5-drum text being shown, the text it is rolling away from, and the
+    // roll's frame (0 = at rest). A digit that changes slides DOWN out of its window while the
+    // new one slides in from above - only while awake (the animation timer is running).
+    private var _beltTo as String;
+    private var _beltFrom as String;
+    private var _beltPhase as Number;
 
     // The date ring's weekday and month patches (make_date_ring.py). Loaded in onShow and again
     // only when the date changes - once a day, not per frame (loading a resource is documented
@@ -89,6 +77,9 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         _fMid = null;
         _fStep = null;
         _zones = HRG_FALLBACK_ZONES as Array<Number>;
+        _beltTo = "";
+        _beltFrom = "";
+        _beltPhase = 0;
         _discharge = new Discharge();
         _timer = null;
     }
@@ -166,11 +157,18 @@ class SteampunkNixieView extends WatchUi.WatchFace {
             _timer = null;
         }
         _discharge.reset();       // never leave a strike or a flare frozen on a static redraw
+        _beltPhase = 0;           // ... or a half-rolled step digit
     }
 
     //! Timer callback: advance the discharge one frame and redraw.
     function onTick() as Void {
         _discharge.step();
+        if (_beltPhase > 0) {
+            _beltPhase += 1;
+            if (_beltPhase > BELT_FRAMES) {
+                _beltPhase = 0;
+            }
+        }
         WatchUi.requestUpdate();
     }
 
@@ -256,31 +254,71 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         }
     }
 
+    //! The step counter: five drums whose digits sit on vertical belts. Each window shows its
+    //! digit with slivers of the next (above) and previous (below) digit at its top and bottom
+    //! edges; when the count changes while the watch is awake, every changed digit rolls DOWN
+    //! one place over BELT_FRAMES animation ticks (ease-out). Leading zeros stay blank, as on a
+    //! mechanical counter, and anything over 99,999 shows its last five digits.
     private function drawSteps(dc as Graphics.Dc) as Void {
-        // steps is nullable — ActivityMonitor.Info documents that its fields may be null.
         var text = "";
         var info = ActivityMonitor.getInfo();
         if (info != null && info.steps != null) {
             text = info.steps.toString();
         }
         if (text.length() == 0) {
-            text = "----";
+            text = "-----";
         }
-        // Right-align into the four drums, blanking the leading drum(s) when the value is shorter,
-        // which is how a mechanical counter suppresses a leading digit.
-        while (text.length() < 4) {
+        while (text.length() < 5) {
             text = " " + text;
         }
-        if (text.length() > 4) {
-            text = text.substring(text.length() - 4, text.length());
+        if (text.length() > 5) {
+            text = text.substring(text.length() - 5, text.length());
         }
-        for (var i = 0; i < 4; i += 1) {
-            var ch = text.substring(i, i + 1);
-            if (ch.equals(" ")) {
-                continue;
+        if (!text.equals(_beltTo)) {
+            // roll only when awake and when there is a previous value to roll away from
+            _beltPhase = (_timer != null && _beltTo.length() == 5) ? 1 : 0;
+            _beltFrom = (_beltPhase > 0) ? _beltTo : text;
+            _beltTo = text;
+        }
+        var off = 0;
+        if (_beltPhase > 0) {
+            var left = BELT_FRAMES - _beltPhase;          // ease-out: fast start, gentle stop
+            off = (BELT_PITCH * (BELT_FRAMES * BELT_FRAMES - left * left))
+                  / (BELT_FRAMES * BELT_FRAMES);
+        }
+        for (var i = 0; i < 5; i += 1) {
+            var to = _beltTo.substring(i, i + 1) as String;
+            var from = _beltFrom.substring(i, i + 1) as String;
+            dc.setClip(DRUM_X0[i], DRUM_Y0, DRUM_X1[i] - DRUM_X0[i], DRUM_Y1 - DRUM_Y0);
+            if (_beltPhase > 0 && !from.equals(to)) {
+                beltDigit(dc, i, beltNext(to), STEP_Y + off - 2 * BELT_PITCH);
+                beltDigit(dc, i, to, STEP_Y + off - BELT_PITCH);
+                beltDigit(dc, i, from, STEP_Y + off);
+                beltDigit(dc, i, beltPrev(from), STEP_Y + off + BELT_PITCH);
+            } else {
+                beltDigit(dc, i, beltNext(to), STEP_Y - BELT_PITCH);
+                beltDigit(dc, i, to, STEP_Y);
+                beltDigit(dc, i, beltPrev(to), STEP_Y + BELT_PITCH);
             }
-            centred(dc, STEP_X[i], STEP_Y[i], fontStep(), ch, INK_IVORY);
+            dc.clearClip();
         }
+    }
+
+    private function beltDigit(dc as Graphics.Dc, i as Number, ch as String, y as Number) as Void {
+        if (!ch.equals(" ")) {
+            centred(dc, STEP_X[i], y, fontStep(), ch, INK_IVORY);
+        }
+    }
+
+    //! The digit printed above / below `ch` on the belt; blank for a blank drum or a "-".
+    private function beltNext(ch as String) as String {
+        var n = ch.toNumber();
+        return (n == null) ? " " : ((n + 1) % 10).toString();
+    }
+
+    private function beltPrev(ch as String) as String {
+        var n = ch.toNumber();
+        return (n == null) ? " " : ((n + 9) % 10).toString();
     }
 
     private function drawHeartRate(dc as Graphics.Dc) as Void {
@@ -289,17 +327,20 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         centred(dc, HRG_X, HR_Y, fontMid(), (hr == null) ? "--" : hr.toString(), INK_IVORY);
     }
 
-    //! 0..1 along the gauge: each zone gets an equal fifth, piecewise-linear through the user's
-    //! six thresholds. Below zone 1 (a resting rate) it is 0; above the zone 5 max it pins at 1.
+    //! 0..1 along the gauge, in HRG_PARTS equal parts, piecewise-linear through 40, 60 and the
+    //! user's six zone thresholds: blue below 60 bpm, green from 60 (user request), then the
+    //! zones. Mirrors hr_gauge.fraction exactly.
     private function hrFraction(hr as Number or Null) as Float {
-        if (hr == null || hr <= _zones[0]) {
+        if (hr == null || hr <= HRG_FLOOR) {
             return 0.0;
         }
-        for (var z = 0; z < 5; z += 1) {
-            var lo = _zones[z];
-            var hi = _zones[z + 1];
+        var z1 = (_zones[0] > HRG_GREEN + 5) ? _zones[0] : HRG_GREEN + 5;
+        var pts = [HRG_FLOOR, HRG_GREEN, z1, _zones[1], _zones[2], _zones[3], _zones[4], _zones[5]];
+        for (var z = 0; z < HRG_PARTS; z += 1) {
+            var lo = pts[z] as Number;
+            var hi = pts[z + 1] as Number;
             if (hr <= hi) {
-                return (z + (hr - lo).toFloat() / (hi - lo)) / 5.0;
+                return (z + (hr - lo).toFloat() / (hi - lo)) / HRG_PARTS;
             }
         }
         return 1.0;
@@ -316,7 +357,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         }
         var span = (HRG_A1 - HRG_A0).toFloat();
         var endA = HRG_A0 + span * frac;
-        var per = HRG_SEGS / 5;
+        var per = HRG_SEGS / HRG_PARTS;
         if (dc has :setAntiAlias) {
             dc.setAntiAlias(true);
         }

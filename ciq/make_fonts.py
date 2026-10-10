@@ -13,6 +13,12 @@ ciq/resources/fonts/. Also writes a preview sheet so the result can be judged be
 """
 import os
 
+import prepare_artwork
+
+# Sizes were tuned on layout C (0.49 / 0.43); they follow any later zoom by the band's factor.
+_G = prepare_artwork.geometry()
+TOP_K, BOT_K = _G["TOP_K"], _G["BOT_K"]
+
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -98,21 +104,34 @@ DIGITS = [(str(i), 48 + i) for i in range(10)]
 # SPLIT-SCALE LAYOUT (prepare_artwork.py): the art is now drawn at 0.49 (tubes) and 0.43 (dials,
 # counter) instead of the old uniform 0.3365, so every size is the old one times its band's factor:
 # top x1.456 (76 -> 111) and bottom x1.278 (48 -> 61, 43 -> 55, 34 -> 43, 16 -> 20).
-t_atlas, t_glyphs = build("NixieTime", DIGITS, px=111, condense=0.58)    # ~75 px digits, tubes
+# NixieTime: Nixie One (SIL OFL, fonts-src/), user-chosen for thin, even-stroke digits like a
+# real tube's wire cathodes (mockups: artwork/glass_digits/_digits.png). Sized by INK height so
+# the digit fills the tube as the old Times Bold one did (75 px at layout C, scaled by TOP_K).
+NIXIE_ONE = os.path.join(HERE, "fonts-src", "nixieone_NixieOne-Regular.ttf")
+
+
+def px_for_ink(source, ink):
+    probe = ImageFont.truetype(source, 200)
+    bb = probe.getbbox("0")
+    return round(200 * ink / (bb[3] - bb[1]))
+
+
+t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
+                          condense=0.80, source=NIXIE_ONE)    # ~75 px digits, tubes
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.
 s_atlas, s_glyphs = build("NixieDay", DIGITS + [("-", 45), (" ", 32)],
-                          px=78, condense=0.62)                          # ~54 px, day number
+                          px=round(78 * BOT_K), condense=0.62)                          # ~54 px, day number
 # Two more sizes, because a bitmap font cannot be scaled at runtime and the gauges do not want the
 # 32 px drum/gauge digit the day number uses:
 #   NixieMid  - the heart-rate number, a step below NixieSmall but still a gauge-face reading.
 #   NixieStep - the odometer drums, which are only ~28 px of clear dark inside the window, so the
 #               32 px digit overflowed onto the brass frame. Shorter is what "fits the drum" means.
 m_atlas, m_glyphs = build("NixieMid", DIGITS + [("-", 45), (" ", 32)],
-                          px=55, condense=0.62)                          # ~37 px
+                          px=round(55 * BOT_K), condense=0.62)                          # ~37 px
 d_atlas, d_glyphs = build("NixieStep", DIGITS + [("-", 45), (" ", 32)],
-                          px=43, condense=0.62)                          # ~29 px
+                          px=round(43 * BOT_K), condense=0.62)                          # ~29 px
 # (NixieLabel - BPM / weekday / month - retired: the date moved into the dial's ring as
 # pre-rendered patches, and BPM went with the heart-rate zone gauge.)
 

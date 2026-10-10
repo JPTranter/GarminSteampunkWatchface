@@ -34,8 +34,12 @@ W, H = 320, 360
 
 CX = 512            # horizontal centre of the device on the 1024 grid
 SEAM = 506          # source y of the join: the dark gap between the manifold and the dial tops
-ST, SB = 0.49, 0.43  # shipping scales (candidate C)
-TOP_Y = 0           # screen y of the tube nipples' tips (source y 60)
+# Shipping scales. Candidate C was 0.49 / 0.43 with the tube tips on the top edge; the user then
+# asked for 5 % less zoom so more of the dials show and the tubes get some room: x0.95, and the
+# tips 6 px down. EVERY on-screen position below is derived from these three numbers (see
+# geometry() and the generated source/Layout.mc), so a zoom change is a one-line edit here.
+ST, SB = 0.49 * 0.95, 0.43 * 0.95
+TOP_Y = 6           # screen y of the tube nipples' tips (source y 60)
 OLD_SCALE = 0.3365  # the previous uniform fit; the fonts scale by ST/OLD_SCALE and SB/OLD_SCALE
 
 # Text centre points ON THE 1024 GRID, with the band each belongs to. These are the coordinates
@@ -77,7 +81,64 @@ def load_clean_source():
     mask = np.zeros(im.shape[:2], np.uint8)
     mask[y0:y1, x0:x1] = m
     im = cv2.inpaint(im, mask, 9, cv2.INPAINT_TELEA)
-    return Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
+    return glass_tubes(Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)))
+
+
+# ---- clear-glass tube envelopes (user-approved "D"; matched to a local-only reference image)
+# The AI art tints the whole envelope gold - the glass walls measure saturation ~120/255 - so the
+# tubes read as polished brass. Matched to the user's reference render: luminance kept, chroma
+# replaced by a cool blue cast, mid-tones pushed down (clear, dark interior), a blue haze where
+# the digit lights the glass, and additive white-blue light - a main specular streak, a faint
+# opposite one, a rim on both walls and a hotspot under the dome. Acts only inside per-tube
+# rectangles on the 1024 grid (walls measured on tube 2: +-64.5 src), down to just above the
+# brass collars, so the collars, manifold and dials are untouched.
+TUBE_X_SRC = [282.3, 439.8, 579.5, 745.9]
+TUBE_HALF_W_SRC = 72            # +-64.5 walls + edge anti-aliasing
+TUBE_WALL_SRC = 64.5
+TUBE_Y0_SRC, TUBE_Y1_SRC = 55, 335    # nipple tip .. just above the collar
+TUBE_DOME_Y_SRC = 124
+TUBE_FEATHER = 8
+
+
+def _tube_mask(w, h):
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    xx = np.arange(w, dtype=np.float32)[None, :]
+    vy = (np.clip((TUBE_Y1_SRC - yy) / TUBE_FEATHER, 0, 1)
+          * np.clip((yy - TUBE_Y0_SRC + TUBE_FEATHER) / TUBE_FEATHER, 0, 1))
+    m = np.zeros((h, w), np.float32)
+    for cx in TUBE_X_SRC:
+        m = np.maximum(m, np.clip((TUBE_HALF_W_SRC - np.abs(xx - cx)) / 4, 0, 1) * vy)
+    return m
+
+
+def glass_tubes(src):
+    a = np.asarray(src, np.float32) / 255.0
+    h, w = a.shape[:2]
+    lum = (0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2])[..., None]
+    base = np.power(np.clip(lum * np.array([0.78, 0.95, 1.22], np.float32), 0, 1), 1.35)
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    xx = np.arange(w, dtype=np.float32)[None, :]
+    spec = np.zeros((h, w), np.float32)
+    haze = np.zeros((h, w), np.float32)
+    body = (np.clip((yy - TUBE_DOME_Y_SRC) / 30, 0, 1)
+            * np.clip((TUBE_Y1_SRC - 12 - yy) / 40, 0, 1))
+
+    def g(x0, sx):
+        return np.exp(-((xx - x0) ** 2) / (2 * sx * sx))
+    for cx in TUBE_X_SRC:
+        spec += 0.62 * g(cx - 0.58 * TUBE_WALL_SRC, 4.5) * body                  # main streak
+        spec += 0.22 * g(cx + 0.62 * TUBE_WALL_SRC, 3.0) * body                  # faint opposite
+        spec += 0.40 * (g(cx - 0.97 * TUBE_WALL_SRC, 2.2)
+                        + g(cx + 0.97 * TUBE_WALL_SRC, 2.2)) * body              # rims
+        spec += 0.75 * np.exp(-(((xx - cx) / 12) ** 2
+                                + ((yy - (TUBE_DOME_Y_SRC + 8)) / 7) ** 2))      # dome hotspot
+        haze += 0.30 * np.exp(-(((xx - cx) / 48) ** 2 + ((yy - 255) / 85) ** 2))
+    m = _tube_mask(w, h)
+    out = base + (haze * m)[..., None] * np.array([0.10, 0.32, 0.62], np.float32)
+    light = (np.clip(spec, 0, 1) * m)[..., None] * np.array([0.82, 0.92, 1.0], np.float32)
+    out = 1 - (1 - np.clip(out, 0, 1)) * (1 - light)                             # screen blend
+    res = a * (1 - m[..., None]) + out * m[..., None]
+    return Image.fromarray((np.clip(res, 0, 1) * 255).round().astype(np.uint8), "RGB")
 
 
 class Layout:
@@ -120,12 +181,117 @@ class Layout:
 
 SHIP = Layout("split", ST, SB, TOP_Y)
 
+# Points MEASURED on the layout-C screen (0.49 / 0.43, tips at y 0), converted once to the 1024
+# grid so they follow any later zoom. Measured: the tube-tip knobs the arcs jump between, the
+# dark band above the domes the arcs stay inside, and the HR dial face (centre and the gauge band
+# radii). The date dial centre and ring radius were measured on the source directly.
+_C = Layout("C", 0.49, 0.43, 0)
+
+
+def _unmap(sx, sy, band, lay=_C):
+    if band == "top":
+        return (sx - 160) / lay.st + CX, (sy - lay.oy) / lay.st
+    return (sx - 160) / lay.sb + CX, (sy - lay.seam_y) / lay.sb + SEAM
+
+
+ARC_A_SRC = [_unmap(x, y, "top") for x, y in ((54, 7), (129, 7), (200, 7), (43, 7), (275, 7))]
+ARC_B_SRC = [_unmap(x, y, "top") for x, y in ((119, 7), (189, 7), (264, 7), (0, 15), (319, 15))]
+ARC_B_EDGE = [None, None, None, 0, 319]           # channels 3, 4 end ON the screen edge
+ARC_Y_SRC = (_unmap(0, 1, "top")[1], _unmap(0, 21, "top")[1])
+HR_DIAL_SRC = _unmap(29, 274, "bot")              # HR dial face centre
+HR_BAND_SRC = (34 / 0.43, 42 / 0.43)              # gauge band radii, in source px
+DATE_DIAL_SRC = (810, 658)                        # date dial centre (polar-unwrap fit)
+# The step counter's FIVE drum windows (the face used to fill only the right four, so 12,345
+# showed as 2345). Measured on the 0.4655 / 0.4085 frame: dividers at screen x 99 / 122 / 144 /
+# 167 / 190 / 214, clear window y 229..267 (frame at 222 and 268), converted to the 1024 grid.
+DRUM_DIV_SRC = [362.67, 418.98, 472.83, 529.14, 585.44, 644.19]
+DRUM_Y_SRC = (543.67, 636.69)
+BELT_PITCH_SRC = 30 / 0.4085     # digit spacing on the belt: 30 px, so the next/previous digit
+                                 # shows as a ~3 px sliver at the window's top and bottom
+RING_R_SRC = 104                                  # ring band centre radius
+RING_CAP_SRC = 11 / 0.43                          # ring letter cap height, in source px
+
+
+def geometry(lay=SHIP):
+    """Every derived on-screen position/size, for the generators and Layout.mc."""
+    g = {}
+    c = {k: lay.map(x, y, b) for k, (x, y, b) in POINTS.items()}
+    g["TIME_X"] = [round(c[f"tube{i}"][0]) for i in range(1, 5)]
+    g["TIME_Y"] = round(c["tube1"][1])
+    dx = [lay.map(x, 600, "bot")[0] for x in DRUM_DIV_SRC]
+    dy = [lay.map(512, y, "bot")[1] for y in DRUM_Y_SRC]
+    g["DRUM_X0"] = [round(x) + 1 for x in dx[:-1]]          # clear interior, inside the dividers
+    g["DRUM_X1"] = [round(x) for x in dx[1:]]
+    g["DRUM_Y0"], g["DRUM_Y1"] = round(dy[0]), round(dy[1])
+    g["STEP_X"] = [round((a + b) / 2) for a, b in zip(dx[:-1], dx[1:])]
+    g["STEP_Y"] = round((dy[0] + dy[1]) / 2)
+    g["BELT_PITCH"] = round(BELT_PITCH_SRC * lay.sb)
+    ax = [lay.map(x, y, "top") for x, y in ARC_A_SRC]
+    bx = [lay.map(x, y, "top") for x, y in ARC_B_SRC]
+    g["ARC_AX"] = [round(p[0]) for p in ax]
+    g["ARC_AY"] = [round(p[1]) for p in ax]
+    g["ARC_BX"] = [e if e is not None else round(p[0]) for p, e in zip(bx, ARC_B_EDGE)]
+    g["ARC_BY"] = [round(p[1]) for p in bx]
+    g["ARC_Y_MIN"] = max(0, round(ARC_Y_SRC[0] * lay.st + lay.oy))
+    g["ARC_Y_MAX"] = round(ARC_Y_SRC[1] * lay.st + lay.oy)
+    hx, hy = lay.map(*HR_DIAL_SRC, "bot")
+    g["HR_CENTRE"] = (hx, hy)
+    g["HR_BAND"] = (HR_BAND_SRC[0] * lay.sb, HR_BAND_SRC[1] * lay.sb)
+    g["DATE_CENTRE"] = lay.map(*DATE_DIAL_SRC, "bot")
+    g["RING_R"] = RING_R_SRC * lay.sb
+    g["RING_CAP"] = RING_CAP_SRC * lay.sb
+    g["TOP_K"] = lay.st / 0.49          # font scale vs the layout the font sizes were tuned on
+    g["BOT_K"] = lay.sb / 0.43
+    return g
+
+
+def write_layout_mc(g, path=os.path.join(HERE, "source", "Layout.mc")):
+    def lst(v):
+        return "[" + ", ".join(str(x) for x in v) + "]"
+    hx, hy = g["HR_CENTRE"]
+    dx, dy = g["DATE_CENTRE"]
+    with open(path, "w", newline="\n") as f:
+        f.write(f"""// GENERATED by ciq/prepare_artwork.py from ST={ST:.4f} SB={SB:.4f} TOP_Y={TOP_Y} -
+// do not edit; change the layout there and run `python make.py assets`.
+import Toybox.Lang;
+
+// Tube digit centres (the drawers centre each glyph on these).
+const TIME_X = {lst(g["TIME_X"])};
+const TIME_Y = {g["TIME_Y"]};
+
+// The five step drums: digit centres, each window's clear interior (the belt is clipped to it),
+// and the belt's digit spacing.
+const STEP_X = {lst(g["STEP_X"])};
+const STEP_Y = {g["STEP_Y"]};
+const DRUM_X0 = {lst(g["DRUM_X0"])};
+const DRUM_X1 = {lst(g["DRUM_X1"])};
+const DRUM_Y0 = {g["DRUM_Y0"]};
+const DRUM_Y1 = {g["DRUM_Y1"]};
+const BELT_PITCH = {g["BELT_PITCH"]};
+
+// The heart-rate number sits on the HR dial's centre, the day number on the date dial's centre.
+// Both fonts put their ink centre 0.5 px above the y passed to centred(), hence the +0.5.
+const HR_Y = {round(hy + 0.5)};
+const DAY_X = {round(dx)};
+const DAY_Y = {round(dy + 0.5)};
+
+// Arc channels (Discharge.mc): tube-tip knobs, and the dark band the bolts must stay inside.
+const ARC_AX = {lst(g["ARC_AX"])};
+const ARC_AY = {lst(g["ARC_AY"])};
+const ARC_BX = {lst(g["ARC_BX"])};
+const ARC_BY = {lst(g["ARC_BY"])};
+const ARC_Y_MIN = {g["ARC_Y_MIN"]};
+const ARC_Y_MAX = {g["ARC_Y_MAX"]};
+""")
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     frame = SHIP.background(load_clean_source())
     p = os.path.join(OUT, "cand_split.png")
     frame.save(p)
     print(f"wrote {p}  top x{ST} bottom x{SB}  seam at screen y {SHIP.seam_y:.0f}")
-    print(f"font scale vs the old fit: top x{ST / OLD_SCALE:.3f}  bottom x{SB / OLD_SCALE:.3f}")
-    for k, (x, y) in SHIP.coords().items():
-        print(f"  {k:8s} {x:4d}, {y:4d}")
+    g = geometry()
+    write_layout_mc(g)
+    print(f"wrote source/Layout.mc  time x {g['TIME_X']} y {g['TIME_Y']}  "
+          f"HR dial ({g['HR_CENTRE'][0]:.1f}, {g['HR_CENTRE'][1]:.1f})  "
+          f"date dial ({g['DATE_CENTRE'][0]:.1f}, {g['DATE_CENTRE'][1]:.1f})")

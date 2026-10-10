@@ -1,9 +1,12 @@
 """Heart-rate zone gauge, variant B (user-approved: artwork/hr_gauge/_compare.png, row B).
 
 A graduated band round the HR dial face - cold blue -> green -> orange -> red - that is LIT up
-to the current heart rate and dim beyond it. Each of the user's five zones gets an equal share
-of the arc (as Garmin's own zone gauges do); the zone thresholds come from
-UserProfile.getHeartRateZones on the watch, so only the fill position depends on the user.
+to the current heart rate and dim beyond it. The arc has SEVEN equal parts:
+    40..60 bpm cold blue | 60 bpm..zone 1 green (a normal resting rate) | zones 1..5
+so GREEN STARTS AT 60 BPM for everyone (user request), and the five zones run green -> yellow ->
+orange -> red above it (as Garmin's own zone gauges do). The first version had only the five
+zones, so a resting rate - below zone 1 - lit nothing, and the gauge looked broken on the watch.
+Zone thresholds come from UserProfile.getHeartRateZones; 40 and 60 bpm are fixed.
 
 Split between build time and run time, so the watch draws as little as possible:
   * bake(img)  - paints the DIM band and the four zone gaps into the background (called by
@@ -24,19 +27,27 @@ import os
 from PIL import Image, ImageDraw
 
 import device_colour
+import prepare_artwork
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEN_MC = os.path.join(HERE, "source", "HrGauge.mc")
 
-HX, HY = 29, 274
-R_IN, R_OUT = 34, 42
+_G = prepare_artwork.geometry()          # follows the layout's zoom
+HX, HY = round(_G["HR_CENTRE"][0]), round(_G["HR_CENTRE"][1])
+R_IN, R_OUT = round(_G["HR_BAND"][0]), round(_G["HR_BAND"][1])
 A0, A1 = -125.0, 125.0          # screen degrees, clockwise
-SEGS = 50                       # lit segments: 5 deg each, 10 per zone
+PARTS = 7                       # 40-60 | 60-zone 1 | zones 1..5, equal shares of the arc
+SEGS = 70                       # lit segments: ~3.6 deg each, 10 per part
+FLOOR_BPM = 40                  # the start of the arc
+GREEN_BPM = 60                  # where green begins (user request)
 GAP_DEG = 1.0                   # trimmed off each side of a zone boundary when lit
 DIM = 0.28                      # unlit band brightness (of the corrected colour)
 FALLBACK_ZONES = [98, 117, 137, 156, 176, 195]   # only if the watch returns no zones
-STOPS = [(0.00, (40, 100, 255)), (0.30, (40, 200, 110)), (0.62, (255, 160, 30)),
-         (1.00, (235, 30, 30))]
+# colour stops along the arc (fractions of 7 parts): deep -> light cold blue below 60 bpm, a step
+# to GREEN exactly at 60, then green -> yellow -> orange -> red through the zones
+STOPS = [(0.00, (30, 55, 190)), (1 / 7 - 0.001, (50, 120, 255)), (1 / 7, (40, 200, 110)),
+         (2 / 7, (90, 210, 80)), (3 / 7, (220, 215, 40)), (4 / 7, (255, 165, 30)),
+         (5 / 7, (250, 100, 30)), (1.00, (235, 30, 30))]
 SS = 4
 
 
@@ -73,8 +84,8 @@ def bake(img):
         a1 = A0 + (A1 - A0) * (i + 1) / fine + 0.3
         d.arc(box, a0, a1, fill=tuple(round(v * DIM) for v in c) + (255,),
               width=(R_OUT - R_IN) * SS)
-    for z in range(1, 5):
-        a = math.radians(A0 + (A1 - A0) * z / 5)
+    for z in range(1, PARTS):
+        a = math.radians(A0 + (A1 - A0) * z / PARTS)
         d.line([((HX + (R_IN - 1) * math.cos(a)) * SS, (HY + (R_IN - 1) * math.sin(a)) * SS),
                 ((HX + (R_OUT + 1) * math.cos(a)) * SS, (HY + (R_OUT + 1) * math.sin(a)) * SS)],
                fill=(10, 8, 6, 255), width=SS)
@@ -85,13 +96,15 @@ def bake(img):
 
 
 def fraction(hr, zones):
-    """0..1 along the arc: equal share per zone, piecewise-linear through the six thresholds."""
-    if hr is None or hr <= zones[0]:
+    """0..1 along the arc: seven equal parts, piecewise-linear through 40, 60 and the six zone
+    thresholds (zone 1 min is held at least 5 bpm above 60). The view applies the same rule."""
+    pts = [FLOOR_BPM, GREEN_BPM, max(zones[0], GREEN_BPM + 5)] + list(zones[1:])
+    if hr is None or hr <= pts[0]:
         return 0.0
-    for z in range(5):
-        lo, hi = zones[z], zones[z + 1]
+    for z in range(PARTS):
+        lo, hi = pts[z], pts[z + 1]
         if hr <= hi:
-            return (z + (hr - lo) / (hi - lo)) / 5.0
+            return (z + (hr - lo) / (hi - lo)) / PARTS
     return 1.0
 
 
@@ -107,9 +120,9 @@ def lit_segments(frac):
         if s0 >= end:
             break
         s1 = min(s1, end)
-        if i % (SEGS // 5) == 0 and i > 0:
+        if i % (SEGS // PARTS) == 0 and i > 0:
             s0 += GAP_DEG
-        if (i + 1) % (SEGS // 5) == 0 and i < SEGS - 1 and s1 == A0 + span * (i + 1) / SEGS:
+        if (i + 1) % (SEGS // PARTS) == 0 and i < SEGS - 1 and s1 == A0 + span * (i + 1) / SEGS:
             s1 -= GAP_DEG
         if s1 > s0:
             out.append((s0, s1, i))
@@ -148,6 +161,9 @@ const HRG_PEN = {R_OUT - R_IN};
 const HRG_A0 = {int(A0)};
 const HRG_A1 = {int(A1)};
 const HRG_SEGS = {SEGS};
+const HRG_PARTS = {PARTS};       // 40-60 | 60-zone 1 | zones 1..5
+const HRG_FLOOR = {FLOOR_BPM};
+const HRG_GREEN = {GREEN_BPM};
 const HRG_GAP = {GAP_DEG:g};
 const HRG_FALLBACK_ZONES = [{", ".join(str(z) for z in FALLBACK_ZONES)}];
 // lit colour per segment, already AMOLED-corrected (device_colour.py)

@@ -8,7 +8,7 @@ not photos.
 Writes:
     docs/images/face.png           hero, 2x, mid-workout heart rate
     docs/images/states.png         three heart rates side by side (rest / workout / peak)
-    docs/images/discharge.gif      the arc flicker + glow pulse (tube band, 1x)
+    docs/images/discharge.gif      arc flicker, glow pulse and a step-belt rollover (1x)
     docs/store/screenshot_N.png    320x360 1x device-size screenshots for the store listing
     docs/store/hero.png            640x720 store hero image
 """
@@ -51,10 +51,17 @@ if __name__ == "__main__":
     c = preview.parse_constants()
     dis = preview.Discharge(c)
     frames = []
-    for _ in range(40):
+    # arcs + glow pulse, and a step rollover (8,399 -> 8,400) a second in, so the belts roll too
+    frm, to, phase = preview.belt_text(8399), preview.belt_text(8399), 0
+    for n in range(40):
         dis.step()
-        f = device_colour.as_seen(preview.render(consts=c, hr=150, discharge=dis))
-        frames.append(f.crop((0, 0, 320, 150)))
+        if phase > 0:
+            phase = phase + 1 if phase < c["BELT_FRAMES"] else 0
+        if n == 10:
+            frm, to, phase = to, preview.belt_text(8400), 1
+        f = device_colour.as_seen(preview.render(consts=c, hr=150, discharge=dis,
+                                                 belt=(frm, to, phase)))
+        frames.append(f.crop((0, 0, 320, 280)))
     frames[0].save(os.path.join(IMG, "discharge.gif"), save_all=True, append_images=frames[1:],
                    duration=c["FRAME_MS"], loop=0, optimize=True)
     for n in sorted(os.listdir(IMG)) + [f"store/{n}" for n in sorted(os.listdir(STORE))]:

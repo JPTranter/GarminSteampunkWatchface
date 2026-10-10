@@ -37,11 +37,14 @@ BG = os.path.join(HERE, "resources", "drawables", "background.png")
 RING = os.path.join(HERE, "resources", "drawables", "ring")
 GEN_MC = os.path.join(HERE, "source", "DateRing.mc")
 
-CX, CY = 288.1, 283.9
-R_TEXT = 44.7
+import prepare_artwork  # noqa: E402  (geometry follows the layout's scales)
+
+_G = prepare_artwork.geometry()
+CX, CY = _G["DATE_CENTRE"]
+R_TEXT = _G["RING_R"]
 TOP_SEGS = [223.0, 255.5, 284.5]      # weekday, left -> right
 BOT_SEGS = [137.0, 106.0, 74.0]       # month, left -> right
-CAP_PX = 11                            # cap height; the ring band is ~15 px deep
+CAP_PX = round(_G["RING_CAP"])        # cap height; ~11 px at layout C (band ~15 px deep)
 GEORGIA = r"C:\Windows\Fonts\georgia.ttf"
 INK_DIM = (0xFF, 0xD8, 0xA0)           # the view's INK_DIM, as the labels used before
 SS = 6                                 # supersampling for clean rotation

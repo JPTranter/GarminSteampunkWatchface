@@ -67,3 +67,8 @@ secrets.*
 
 # ---- Agent workspace (not project content) ----
 .hermes/
+
+# User-supplied reference images of unknown provenance stay local (copyright): the glass
+# treatment was matched to it, and LESSONS L56 describes what it showed.
+ciq/artwork/glass_digits/reference_user.png
+ciq/artwork/glass_digits/_reference_glass.png

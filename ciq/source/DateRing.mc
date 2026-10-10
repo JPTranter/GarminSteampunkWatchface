@@ -2,10 +2,10 @@
 import Toybox.Lang;
 
 // Top-left of the weekday / month patches (each group shares one rectangle).
-const RING_TOP_X = 245;
-const RING_TOP_Y = 233;
-const RING_BOT_X = 246;
-const RING_BOT_Y = 304;
+const RING_TOP_X = 241;
+const RING_TOP_Y = 227;
+const RING_BOT_X = 242;
+const RING_BOT_Y = 296;
 
 //! Resource id of the weekday patch for Gregorian day_of_week (1 = Sunday .. 7 = Saturday).
 function ringWeekday(dow as Number) as ResourceId {

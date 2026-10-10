@@ -40,7 +40,8 @@ W, H = 320, 360
 # ---------------------------------------------------------------- the view's own constants
 def parse_constants(paths=(SOURCE, os.path.join(HERE, "source", "Discharge.mc"),
                            os.path.join(HERE, "source", "DateRing.mc"),
-                           os.path.join(HERE, "source", "HrGauge.mc"))):
+                           os.path.join(HERE, "source", "HrGauge.mc"),
+                           os.path.join(HERE, "source", "Layout.mc"))):
     """Read every `const NAME = value;` out of the view and the generated/extra .mc files."""
     if isinstance(paths, str):
         paths = (paths,)
@@ -224,12 +225,44 @@ class Discharge:
 
 
 # ---------------------------------------------------------------- the frame
-def render(mock=True, sleep=False, consts=None, discharge=None, hr=None):
+def belt_text(steps):
+    """The view's 5-drum text: right-aligned, leading zeros blank, last five digits."""
+    return (str(steps).rjust(5))[-5:]
+
+
+def belt_digits(face, consts, font, frm, to, phase):
+    """Mirror of SteampunkNixieView.drawSteps: each drum clipped to its window, the digit with
+    its belt neighbours, and a changed digit rolled down by the same ease-out offset."""
+    p, F = consts["BELT_PITCH"], consts["BELT_FRAMES"]
+    off = (p * (F * F - (F - phase) ** 2)) // (F * F) if phase > 0 else 0
+    nxt = lambda c: str((int(c) + 1) % 10) if c.isdigit() else " "
+    prv = lambda c: str((int(c) + 9) % 10) if c.isdigit() else " "
+    y = consts["STEP_Y"]
+    for i in range(5):
+        x0, x1 = consts["DRUM_X0"][i], consts["DRUM_X1"][i]
+        y0, y1 = consts["DRUM_Y0"], consts["DRUM_Y1"]
+        win = face.crop((x0, y0, x1, y1))
+        layer = face.copy()
+        if phase > 0 and frm[i] != to[i]:
+            seq = [(nxt(to[i]), y + off - 2 * p), (to[i], y + off - p), (frm[i], y + off),
+                   (prv(frm[i]), y + off + p)]
+        else:
+            seq = [(nxt(to[i]), y - p), (to[i], y), (prv(to[i]), y + p)]
+        for ch, cy in seq:
+            if ch != " ":
+                centred(layer, consts, font, ch, consts["STEP_X"][i], cy, consts["INK_IVORY"])
+        face.paste(layer.crop((x0, y0, x1, y1)), (x0, y0))      # the clip
+        del win
+
+
+def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, background=None,
+           belt=None):
     consts = consts or parse_constants()
     f_time, f_day = Font("NixieTime"), Font("NixieDay")
     f_mid, f_step = Font("NixieMid"), Font("NixieStep")
 
-    face = Image.open(IMAGE).convert("RGB")
+    face = (background.copy() if background is not None
+            else Image.open(IMAGE).convert("RGB"))   # background=: mockups of a changed frame
     assert face.size == (W, H), face.size
 
     if mock:
@@ -253,11 +286,8 @@ def render(mock=True, sleep=False, consts=None, discharge=None, hr=None):
         # The glow is painted back-to-front: far ring, near ring, then the core glyph on top.
         glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], i, discharge)
 
-    text = (steps.rjust(4))[-4:]
-    for i, ch in enumerate(text):
-        if ch == " ":
-            continue
-        centred(face, consts, f_step, ch, consts["STEP_X"][i], consts["STEP_Y"][i], consts["INK_IVORY"])
+    frm, to, phase = belt if belt else (belt_text(steps), belt_text(steps), 0)
+    belt_digits(face, consts, f_step, frm, to, phase)
 
     # the zone gauge (variant B): the dim band is in the background; light it up to the rate,
     # through the same segment rule the view uses (example zones - the watch reads the user's)
@@ -297,15 +327,22 @@ if __name__ == "__main__":
     if args.anim:
         dis = Discharge(consts)
         frames = []
-        for _ in range(args.anim):
+        # the step belts: a rollover 8399 -> 8400 a second in, so several drums roll at once
+        frm, to, phase = belt_text(8399), belt_text(8399), 0
+        for n in range(args.anim):
             dis.step()                          # the watch steps, then redraws, every FRAME_MS
-            f = render(mock=not args.now, consts=consts, discharge=dis, hr=args.hr)
+            if phase > 0:
+                phase = phase + 1 if phase < consts["BELT_FRAMES"] else 0
+            if n == 10:
+                frm, to, phase = to, belt_text(8400), 1
+            f = render(mock=not args.now, consts=consts, discharge=dis, hr=args.hr,
+                       belt=(frm, to, phase))
             f = device_colour.as_seen(f) if args.as_seen else f
             frames.append(f.resize((W * args.scale, H * args.scale), Image.LANCZOS))
         gif = os.path.join(HERE, "artwork", "anim_preview.gif")
         # Everything that animates (the arcs and the tube halos) lives in the tube band, y < 150,
         # so the GIF is that band only - a full-face 80-frame GIF at 2x was 28 MB.
-        band = [fr.crop((0, 0, W * args.scale, 150 * args.scale)) for fr in frames]
+        band = [fr.crop((0, 0, W * args.scale, 280 * args.scale)) for fr in frames]
         band[0].save(gif, save_all=True, append_images=band[1:], duration=consts["FRAME_MS"],
                      loop=0, optimize=True)
         # contact sheet of the top band (where the arcs live), 8 frames per row, at 2x

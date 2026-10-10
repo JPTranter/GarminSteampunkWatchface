@@ -8,19 +8,12 @@ import Toybox.Math;
 
 const FRAME_MS = 100;          // animation tick while awake (Timer minimum is 50 ms)
 
-// Arc channels: endpoints MEASURED on the shipping frame. The nipple knobs at the tube tips sit
-// at x ~48 / 124 / 194 / 269, y 2..11, and the band between them is dark down to y ~24 — the
-// only dark space near the tubes once the split-scale layout cropped the art's side sparks.
-// Channels 0-2 jump knob-to-knob across the three gaps; 3 and 4 discharge from the outer knobs
-// to the case edge, where the reference art's sparks were.
-const ARC_AX = [54, 129, 200, 43, 275];
-const ARC_AY = [7, 7, 7, 7, 7];
-const ARC_BX = [119, 189, 264, 0, 319];
-const ARC_BY = [7, 7, 7, 15, 15];
+// Arc channels: the endpoints (ARC_AX/AY/BX/BY) and the dark band the bolts stay inside
+// (ARC_Y_MIN/MAX) are GENERATED into Layout.mc - measured once on the tube-tip knobs and mapped
+// through the current layout. Channels 0-2 jump knob-to-knob across the three gaps above the
+// domes; 3 and 4 discharge from the outer knobs to the screen edge.
 const ARC_TUBE_A = [0, 1, 2, 0, 3];      // the tube each end touches (-1: the case)
 const ARC_TUBE_B = [1, 2, 3, -1, -1];
-const ARC_Y_MIN = 1;                     // keep the bolt in the dark band above the domes
-const ARC_Y_MAX = 21;
 const ARC_ON_MIN = 1;                    // frames a strike lasts (re-jittered every frame)
 const ARC_ON_MAX = 3;
 const ARC_OFF_MIN = 4;                   // frames of quiet between strikes

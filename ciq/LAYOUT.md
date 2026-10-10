@@ -34,6 +34,21 @@ top:    screen = ((src_x - 512) * 0.49 + 160,  src_y * 0.49 - 29.4)
 bottom: screen = ((src_x - 512) * 0.43 + 160, (src_y - 506) * 0.43 + 218.5)
 ```
 
+### Zoomed out 5 %, and every position generated (current)
+At the user's request the split scales went to **0.4655 / 0.4085** (C × 0.95), with the tube tips
+6 px below the top edge, so the tubes have room and more of both dials shows. Rather than
+re-measure, every on-screen position is now *generated* from the scales by
+`prepare_artwork.py` into `source/Layout.mc`: tube digits, the five step drums and their
+windows, the HR and day numbers, the arc channels. The HR gauge (`hr_gauge.py`), the date ring
+(`make_date_ring.py`) and the font sizes (`make_fonts.py`) take their geometry from the same
+`geometry()`. Points measured on a screen are converted once to the 1024 grid and mapped
+forward. Check: feeding layout C back through `geometry()` reproduces every hand-measured value
+that shipped on it, exactly. A zoom change is now the one `ST, SB, TOP_Y` line.
+
+The tube envelopes are re-lit as clear blue glass before the split (`glass_tubes`; see
+LESSONS L56), and the step counter now uses all **five** drum windows the art has (dividers at
+screen x 99 / 122 / 144 / 167 / 190 / 214, window y 229..267 on this frame).
+
 ### The original uniform transform (history)
 
 Scale `0.3365`, crop origin `(12, -31)`. Source → screen transform:
