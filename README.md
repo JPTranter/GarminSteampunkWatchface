@@ -7,6 +7,11 @@ tips every time you raise your wrist.**
 
 ![Arc flicker and glow pulse](docs/images/discharge.gif)
 
+![Steampunk Nixie running on a Venu Sq 2 on the wrist](docs/images/wrist-demo.gif)
+
+*On the wrist: a real Venu Sq 2 running the face — this one is a photo, not a render.
+[Full clip, 4.9 s MP4](docs/store/wrist-demo.mp4).*
+
 [![CI](https://github.com/JPTranter/GarminSteampunkWatchface/actions/workflows/ci.yml/badge.svg)](https://github.com/JPTranter/GarminSteampunkWatchface/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/JPTranter/GarminSteampunkWatchface)](https://github.com/JPTranter/GarminSteampunkWatchface/releases)
 [![MIT licence](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)

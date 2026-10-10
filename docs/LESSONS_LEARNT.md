@@ -549,3 +549,24 @@ weekday and month names on the dial ring to be bold.
   area, so the fix was an outline on the same glyph (`stroke_width` at SS x = 0.8 px at final size)
   rather than bolting on Georgia Bold. At a 10 px cap that takes Georgia's ~1.2 px stems to ~2 px —
   the difference between a leaping word and a smudge on the wrist.
+
+**L66. A repo video does not play in a README; a GIF does - and stabilising costs two settings.**
+The store clip (7 s of the face on the wrist) came in at 484x704, 60 fps, 14.5 Mbps HEVC: 12.7 MB, of
+which almost all was waste. What worked:
+
+- **Trim first, detect second.** vidstab is two passes, and the transform file is per-frame: running
+  `vidstabdetect` on the full clip while encoding from `-ss 1.2` applies every row to the wrong frame,
+  and the video JUMPS. Detect on exactly what will be encoded.
+- **`maxangle` is the rotation control, and it has no limit by default.** This build's
+  `vidstabtransform` has no `rotational` option; unbounded `maxangle` (-1) lets it rotate the frame,
+  which on a wrist shot reads as the whole picture tilting. `maxangle=0` + `optzoom=1` (static zoom,
+  not the dynamic default of 2) gave wobble RMS 11.6 -> 1.5 px on rigid content at the same rotation
+  as the source. `deshake` (translation only) managed 4.9 px and added rotation of its own.
+- **Measure the shake on RIGID content.** Phase-correlating a crop that includes the watch display
+  returns nonsense, because those pixels are supposed to change.
+- **GitHub**: a committed `.mp4` referenced from a README does **not** play (the `<video>` tag is
+  stripped for repo/raw URLs) - it is a download link. Inline motion means either an animated GIF
+  committed to the repo (what this project does) or an `.mp4` dragged into the GitHub README editor,
+  which lands on `user-attachments` and renders as a native player. The GIF is made with
+  `palettegen`/`paletteuse` (340 px wide, 11 fps, 3.6 s, 160 colours -> 3.0 MB; 280 px/10 fps was
+  1.9 MB). ffmpeg's APNG muxer produced 13 MB for the same clip, so it is not the smaller option here.
