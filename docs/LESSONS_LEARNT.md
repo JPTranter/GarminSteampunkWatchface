@@ -601,6 +601,13 @@ bounding-box average) is what says which element to change.
   hotter row pale. Render the rung before shipping it, but take the DIRECTION from the wrist: a device
   report is the only measurement taken from the panel side, and here it also settled that the RING
   stays bright (it is what the separator dots and the halo edge read as) while only `INK_TIME` moves.
+- **A second wrist report moved the ink again, and where it is applied is the reusable part.** "It
+  still looks yellow - add 10% more red" lands on EVERY ink layer (the core and all three bloom
+  bands), not on the core alone: the digit reads as its bands as much as its middle, so shifting one
+  moves the hue of its edge away from its centre. One number does it (`tube_colour.RED_SHIFT`, red up
+  toward 255 with green/blue down, so the hue walks red instead of merely brightening); the as-seen
+  ink measured hue 31 -> 27 -> 24 -> 20 deg over k = 0.00 / 0.10 / 0.20 / 0.30, rendered as a ladder in
+  `artwork/red_ladder.png` so the next request is a letter rather than another guess.
 
 **L68. The animated side sparks: emit from the PAINTED element's own core, fly the way the user says,
 and mirror the RNG in the device's exact order.** The user asked for the artwork's blue side sparks to
