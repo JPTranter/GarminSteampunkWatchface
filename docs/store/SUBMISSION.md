@@ -10,8 +10,10 @@ below don't change.
 | Item | File | Notes |
 |---|---|---|
 | App package | `release/SteampunkNixie-vX.Y.Z.iq` | From `python ciq/make.py release`. One signed `.iq` holds both Venu Sq 2 builds. |
-| Screenshots | `docs/store/screenshot_1.png`, `_2`, `_3` | 320×360, the device's own resolution: resting, workout, peak heart rate. |
-| Hero image | `docs/store/hero_1440x720.png` | 1440×720, the size the store's app upload asks for: title + tagline + the face mid-strike. (`hero.png`, 640×720, is the face alone.) |
+| **Cover image** | `docs/store/upload/cover_640x720.jpg` | 640×720, ~210 KB (limit 300 KB): the face alone. |
+| **Screenshots** | `docs/store/upload/screenshot_1..3_320x360.jpg` | 320×360, the device's own resolution, ~88 KB each (limit 150 KB): resting, workout, peak heart rate. |
+| Full-quality PNGs | `docs/store/*.png` | The same images lossless, for anywhere without a size limit. |
+| **Hero image** | `docs/store/upload/hero_1440x720.jpg` (~232 KB; PNG: `docs/store/hero_1440x720.png`) | 1440×720, the size the store's app upload asks for: title + tagline + the face mid-strike. (`hero.png`, 640×720, is the face alone.) |
 | App icon | built into the `.iq` | `ciq/resources/drawables/launcher_icon.png` (40×40). |
 | Listing text | [LISTING.md](LISTING.md) | Title, short and long description, permission note. |
 

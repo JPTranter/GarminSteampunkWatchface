@@ -31,6 +31,16 @@ def seen(hr, discharge=None, scale=2):
     return f.resize((320 * scale, 360 * scale), Image.LANCZOS) if scale != 1 else f
 
 
+def save_under(img, path, max_kb):
+    """Save as JPEG at the highest quality (95 down to 60) that fits the store's size limit."""
+    for q in range(95, 59, -5):
+        img.convert("RGB").save(path, "JPEG", quality=q, optimize=True, progressive=True,
+                                subsampling=0 if q >= 90 else 2)
+        if os.path.getsize(path) <= max_kb * 1024:
+            return q
+    raise SystemExit(f"FAIL {path} does not fit {max_kb} KB even at quality 60")
+
+
 def hero_banner(c):
     """1440x720 Connect IQ Store hero: the face (as seen, mid-strike) on the right, the title and
     a tagline on the left over a soft blue glow. Text uses the OFL fonts in fonts-src/ only."""
@@ -122,7 +132,23 @@ if __name__ == "__main__":
     frames[0].save(os.path.join(IMG, "discharge.gif"), save_all=True, append_images=frames[1:],
                    duration=c["FRAME_MS"], loop=0, optimize=True)
 
-    hero_banner(c).save(os.path.join(STORE, "hero_1440x720.png"))
+    hero = hero_banner(c)
+    hero.save(os.path.join(STORE, "hero_1440x720.png"))
+
+    # ---- the size-limited set the Connect IQ app upload accepts: cover < 300 KB, screenshots
+    # < 150 KB. JPEG at the best quality that fits (the PNGs above are 190-800 KB).
+    up = os.path.join(STORE, "upload")
+    os.makedirs(up, exist_ok=True)
+    report = []
+    q = save_under(seen(150), os.path.join(up, "cover_640x720.jpg"), 290)
+    report.append(("cover_640x720.jpg", q))
+    q = save_under(hero, os.path.join(up, "hero_1440x720.jpg"), 290)
+    report.append(("hero_1440x720.jpg", q))
+    for i, (hr, _) in enumerate(states):
+        name = f"screenshot_{i + 1}_320x360.jpg"
+        report.append((name, save_under(seen(hr, scale=1), os.path.join(up, name), 140)))
+    for name, q in report:
+        print(f"  upload/{name:28s} {os.path.getsize(os.path.join(up, name)) // 1024:4d} KB  q{q}")
     for n in sorted(os.listdir(IMG)) + [f"store/{n}" for n in sorted(os.listdir(STORE))]:
         p = os.path.join(IMG, n) if not n.startswith("store/") else os.path.join(STORE, n[6:])
         print(f"  {n:24s} {os.path.getsize(p) // 1024:5d} KB")
