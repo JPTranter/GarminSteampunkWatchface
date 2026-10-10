@@ -658,3 +658,23 @@ still read the digits as flat: the missing thing was the way light leaves the wi
 - **Judge it at 4x as well as at 1x.** Stepped bands can read as a blocky outline; at 4x the chosen
   ladder showed a continuous halo, visible only because the bands are 1 px each and the glyph's shape
   dominates. Cheap to check, and it is the difference between shipping a glow and shipping a border.
+**L70. drawText has no alpha, but a FONT's coverage IS alpha - that is how a text element gets a real
+gradient.** The user: "for the last colour, is it possible to make the alpha blend over the background
+for 4 pixels out to nothing?" The outer glow was a solid 1 px ring, and four more solid rings would
+have cost 8r glyph blits each per digit per frame; baking the falloff cannot work (it must follow
+glyphs that change every minute).
+
+- **Encode the ramp in a second font's glyph masks.** `make_fonts.halo_mask` puts the glyph mask
+  through `cv2.distanceTransform`, turns distance into `clip((d1 - d) / (d1 - d0), 0, 1)`, zeroes the
+  inside, and pads the box. Drawn with `antialias="true"`, that grey coverage is blended over the
+  background, so one `drawText` in the last glow colour gives a per-glyph fade - measured in place, it
+  ramps over 4-5 px (contribution 82 / 34 / 7 outward at one row, 117 / 93 / 50 / 10 at another) and
+  costs one pass instead of a third of the band cost.
+- **Pad the box symmetrically or the font will not line up.** The fade lives OUTSIDE the glyph's tight
+  bbox, so every glyph needs the same `pad` on all four sides; the extra width cancels in
+  `drawText`'s centre-because-advance maths (the ink sits `pad` px inside a box that is `2*pad` wider),
+  so the fade lands concentrically on the wire while a one-sided or per-glyph pad would drift.
+- **Verify the ramp where it is USED, not only in the atlas.** The atlas's own ramp is not the proof:
+  render the frame with the element and without it (patch the mirror's draw call for one frame) and
+  diff - the pixels the element changed, in the direction it fades, are the ramp the eye sees. Same
+  trick as L64's eroded-core mask: the render is the instrument.

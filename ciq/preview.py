@@ -121,14 +121,13 @@ def ring(canvas, consts, font, text, x, y, radius, colour):
             centred(canvas, consts, font, text, x + dx, y + dy, colour)
 
 
-def glowing(canvas, consts, font, text, x, y, hot=None):
+def glowing(canvas, consts, font, text, x, y, hot=None, halo=None):
     """Mirror of the view's glowing(): the static halo rings (outer first) under the core. The rings
     no longer pulse - the glow is a fixed bright baseline. Radius 3 is the outermost step of the
     hand-painted bloom (drawText has no alpha, so a soft falloff can only be stepped bands); a radius
     equal to the next one inward is skipped, exactly as the view skips it."""
-    r3 = consts.get("GLOW_RAD3", 0)
-    if r3 and r3 != consts["GLOW_RAD2"]:
-        ring(canvas, consts, font, text, x, y, r3, consts["INK_GLOW3"])
+    if halo is not None:                      # the 4 px fade, alpha-blended by the font's coverage
+        centred(canvas, consts, halo, text, x, y, consts["INK_GLOW3"])
     if consts["GLOW_RAD2"] != consts["GLOW_RAD1"]:
         ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], consts["INK_GLOW2"])
     ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], consts["INK_GLOW1"])
@@ -303,6 +302,7 @@ def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, backgro
     consts = consts or parse_constants()
     f_time, f_day = Font("NixieTime"), Font("NixieDay")
     f_hot = Font("NixieTimeHot")
+    f_halo = Font("NixieTimeHalo")
     f_mid, f_step = Font("NixieMid"), Font("NixieStep")
 
     face = (background.copy() if background is not None
@@ -328,7 +328,7 @@ def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, backgro
         discharge.draw(face)        # as onUpdate: over the background, under every readout
     for i, d in enumerate("%02d%02d" % (hh, mm)):
         # The glow is painted back-to-front: far ring, near ring, then the core glyph on top.
-        glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], f_hot)
+        glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], f_hot, f_halo)
     separator(face, consts)                     # the hours/minutes colon, as the view draws it
 
     frm, to, phase = belt if belt else (belt_text(steps), belt_text(steps), 0)

@@ -58,15 +58,40 @@ def render_glyph(ch, px, condense, source=SERIF_BD, thin=0, thick=0):
     return g.resize((w, g.height), Image.LANCZOS)
 
 
-def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=0, erode=0):
+def halo_mask(g, d0, d1, pad):
+    """The glyph's OUTER fade as an 8-bit coverage mask: alpha 1 at d0 px from the stroke, falling
+    linearly to 0 at d1, and 0 inside d0, on a canvas padded by `pad` so the fade is not clipped.
+    Padding every glyph by the same amount keeps this font's advances and line height in step with the
+    wire font it overlays - the ink sits `pad` px in, so it lands exactly where the wire does.
+
+    This is how a text element gets a real alpha fade on the device: drawText has no alpha parameter,
+    but an antialiased custom font's grey coverage IS blended over the background, so encoding the fade
+    in the coverage gives a per-glyph falloff that follows whatever glyphs are drawn - which a baked
+    blob cannot do, and four more solid bands would cost 8r glyph blits each per digit per frame.
+    """
+    import cv2
+    import numpy as np
+    a = (np.asarray(g, np.uint8) > 127).astype(np.uint8) * 255
+    d = cv2.distanceTransform(255 - a, cv2.DIST_L2, 5)       # px from the stroke edge
+    alpha = np.clip((d1 - d) / float(d1 - d0), 0, 1)
+    alpha[d <= d0] = 0
+    m = Image.fromarray((alpha * 255).astype(np.uint8), "L")
+    big = Image.new("L", (m.width + 2 * pad, m.height + 2 * pad), 0)
+    big.paste(m, (pad, pad))
+    return big
+
+
+def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=0, erode=0,
+          halo=None):
     """specs: list of (char, codepoint). Packs glyphs left-to-right, wrapping at 512 px.
 
     `erode` (after the crop) thins the SAME glyphs without touching their box, so a font built with it
-    has identical metrics to the one it is derived from and lands concentrically on it — the mechanism
-    for drawing a hot centre line inside a wire (built, measured, and dropped in favour of painting the
-    whole stroke white with an orange rim: at a 5 px stroke an eroded core is only ~1 px and barely
-    reads). Keep it as the knob if the thin-core look is ever wanted: `thin` cannot do this job,
-    because it re-crops to the smaller bbox and the two fonts' line heights and advances then differ.
+    has identical metrics to the one it is derived from and lands concentrically on it — that is what
+    draws the wire's cream core inside the yellow body (NixieTimeHot). `thin` cannot do this job: it
+    re-crops to the smaller bbox, so the two fonts' line heights and advances would differ and the core
+    would drift off centre.
+
+    `halo` = (d0, d1, pad) turns the glyph into its own outer fade instead (see halo_mask).
     """
     glyphs = []
     for ch, cp in specs:
@@ -74,6 +99,8 @@ def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=
         if g is not None:
             if erode > 0:
                 g = g.filter(ImageFilter.MinFilter(2 * erode + 1)).filter(ImageFilter.GaussianBlur(0.5))
+            if halo is not None:
+                g = halo_mask(g, halo[0], halo[1], halo[2])
             glyphs.append((ch, cp, g))
     if not glyphs:
         raise SystemExit(f"{name}: no glyphs rendered")
@@ -149,6 +176,12 @@ t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP
 # crop, so both fonts share metrics and the core sits concentrically inside the wire.
 h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
                           condense=0.80, source=NIXIE_ONE, erode=1)
+# NixieTimeHalo: the wire's OUTER fade, drawn in the last glow colour (INK_GLOW3). Its glyphs ARE the
+# alpha ramp - solid to 2 px out from the stroke, then blending to nothing 4 px later - so the falloff
+# follows whatever digits are shown and alpha-blends over the background. The user asked for exactly
+# that: "the last colour ... alpha blend over the background for 4 pixels out to nothing".
+hl_atlas, hl_glyphs = build("NixieTimeHalo", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
+                            condense=0.80, source=NIXIE_ONE, halo=(2.0, 6.0, 7))
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.

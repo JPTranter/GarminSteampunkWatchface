@@ -21,11 +21,13 @@ import Toybox.WatchUi;
 // bitmap font cannot be blurred, so a bloom can only be painted as solid offsets of the glyph.
 const GLOW_RAD1 = 1;         // innermost band, hard against the glyph
 const GLOW_RAD2 = 2;         // middle band: the reference's bloom about 1-2 px out (ciq/ref_glow.py)
-const GLOW_RAD3 = 3;         // outer band, fading into the dark glass; == GLOW_RAD2 skips it
-// Cost, because each band is solid glyph blits: radius r paints 8r of them per digit per frame, so
-// 1/2/3 costs 48 where the single ring cost 8, and each band is another drawText pass. What justified
-// it: the reference's falloff measures L32 one pixel out from its wire, L21 at two and L15 at four,
-// where the single ring jumped from L134 to a flat L17-23 wash across the tube.
+// The outer falloff is NOT a band: it is the NixieTimeHalo font, whose glyph coverage fades from
+// solid at 2 px out to nothing 4 px later, so drawText alpha-blends it over the background and the
+// glow follows whatever digits are drawn (user request: "the last colour ... alpha blend over the
+// background for 4 pixels out to nothing"). Bands are solid glyph blits - radius r costs 8r of them
+// per digit per frame - so stopping at radius 2 and fading the rest costs less than a third band.
+// What set the shape: the reference's falloff measures L32 one pixel out from its wire, L21 at two and
+// L15 at four, where a single ring jumped from L134 to a flat L17-23 wash across the tube.
 
 const INK_IVORY = 0xFFF3D8;  // backlit counter and gauges
 const BELT_FRAMES = 6;       // a step digit's roll: 6 animation ticks = 0.6 s
@@ -44,6 +46,9 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     // The wire's cream core: NixieTimeHot is NixieTime eroded 1 px per side (make_fonts.py), drawn in
     // INK_TIME over the yellow glyph so the stroke has a pale centre, per the user's zoom.
     private var _fTimeHot as Graphics.FontType or Null;
+    // The wire's outer fade, in INK_GLOW3: the glyphs ARE the alpha ramp, so drawText blends them over
+    // the background (the user's "alpha blend over the background for 4 pixels out to nothing").
+    private var _fTimeHalo as Graphics.FontType or Null;
     private var _fDay as Graphics.FontType or Null;
     private var _fMid as Graphics.FontType or Null;
     private var _fStep as Graphics.FontType or Null;
@@ -75,6 +80,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         _bg = null;
         _fTime = null;
         _fTimeHot = null;
+        _fTimeHalo = null;
         _fDay = null;
         _ringWd = null;
         _ringMo = null;
@@ -98,6 +104,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         _bg = WatchUi.loadResource(Rez.Drawables.Background) as Graphics.BitmapType;
         _fTime = WatchUi.loadResource(Rez.Fonts.NixieTime) as Graphics.FontType;
         _fTimeHot = WatchUi.loadResource(Rez.Fonts.NixieTimeHot) as Graphics.FontType;
+        _fTimeHalo = WatchUi.loadResource(Rez.Fonts.NixieTimeHalo) as Graphics.FontType;
         _fDay = WatchUi.loadResource(Rez.Fonts.NixieDay) as Graphics.FontType;
         _ringKey = -1;          // force the ring patches to (re)load on the next draw
         _fMid = WatchUi.loadResource(Rez.Fonts.NixieMid) as Graphics.FontType;
@@ -119,6 +126,12 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     //! The cream-core font, falling back to the wire font (then the stroke is solid yellow).
     private function fontTimeHot() as Graphics.FontType {
         var f = _fTimeHot;
+        return (f == null) ? fontTime() : (f as Graphics.FontType);
+    }
+
+    //! The outer-fade font, falling back to the wire font (then the fade is simply missing).
+    private function fontTimeHalo() as Graphics.FontType {
+        var f = _fTimeHalo;
         return (f == null) ? fontTime() : (f as Graphics.FontType);
     }
 
@@ -226,10 +239,11 @@ class SteampunkNixieView extends WatchUi.WatchFace {
 
     //! Nixie discharge: the glyph in stepped bloom bands with a hot core on top.
     //!
-    //! drawText has no alpha and a bitmap font cannot be blurred, so the bloom can only be painted as
-    //! solid offsets of the same glyph. The bands go down outermost first (GLOW_RAD3, then GLOW_RAD2,
-    //! then GLOW_RAD1), so each pass overwrites the inside of the one before it and the core lands on
-    //! top — the other way round leaves a dim band on top and the digit reads as an outlined glyph.
+    //! drawText has no alpha, so the glow is painted in two ways: the outer fade is a FONT whose glyph
+    //! coverage is the alpha ramp (NixieTimeHalo, in INK_GLOW3, blended over the background by
+    //! drawText itself), and the bands inside it are solid offsets of the glyph, outermost first
+    //! (GLOW_RAD2, then GLOW_RAD1), so each pass overwrites the inside of the one before it and the
+    //! wire lands on top — the other way round leaves a dim band on top and the digit reads outlined.
     //! The glow is a FIXED bright baseline (user decision,
     //! LESSONS L63): it used to pulse with the discharge and flare when a spark struck, which cost a
     //! hue-preserving cap (L61) to keep it from going yellow for a glow nobody asked to move.
@@ -237,10 +251,8 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     //! inward only repaints the pixels that pass already covers, so it is skipped.
     private function glowing(dc as Graphics.Dc, x as Number, y as Number,
                              wire as Graphics.FontType, hot as Graphics.FontType,
-                             text as String) as Void {
-        if (GLOW_RAD3 > GLOW_RAD2) {
-            drawHalo(dc, x, y, wire, text, GLOW_RAD3, INK_GLOW3);
-        }
+                             halo as Graphics.FontType, text as String) as Void {
+        centred(dc, x, y, halo, text, INK_GLOW3);                // the 4 px fade, blended by coverage
         if (GLOW_RAD2 > GLOW_RAD1) {
             drawHalo(dc, x, y, wire, text, GLOW_RAD2, INK_GLOW2);
         }
@@ -274,7 +286,8 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         var clock = System.getClockTime();
         var digits = [clock.hour / 10, clock.hour % 10, clock.min / 10, clock.min % 10];
         for (var i = 0; i < 4; i += 1) {
-            glowing(dc, TIME_X[i], TIME_Y, fontTime(), fontTimeHot(), digits[i].toString());
+            glowing(dc, TIME_X[i], TIME_Y, fontTime(), fontTimeHot(), fontTimeHalo(),
+                    digits[i].toString());
         }
     }
 

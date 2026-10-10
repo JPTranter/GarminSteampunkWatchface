@@ -14,6 +14,9 @@
     <!-- NixieTimeHot: the tube digits eroded 1 px per side - the wire's cream core, drawn over the
          yellow glyph. Same metrics as NixieTime, so it lands concentrically. -->
     <font id="NixieTimeHot" filename="NixieTimeHot.fnt" antialias="true" />
+    <!-- NixieTimeHalo: the same digits as an alpha ramp - solid to 2 px out, then fading to nothing
+         4 px further - the wire's outer glow, blended over the background by drawText. -->
+    <font id="NixieTimeHalo" filename="NixieTimeHalo.fnt" antialias="true" />
     <!-- NixieDay: the date dial's day number (~54 px ink), alone in the inner disc now that
          the weekday and month are pre-rendered into the ring (make_date_ring.py). -->
     <font id="NixieDay" filename="NixieDay.fnt" antialias="true" />

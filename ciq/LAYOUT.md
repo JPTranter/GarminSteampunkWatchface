@@ -57,7 +57,7 @@ counter uses all **five** drum windows the art has (dividers at screen x 99 / 12
 
 The hours/minutes colon is DRAWN, not baked (nothing on the device rotates text, and the art has no
 colon): `SEP_X` 159 / `SEP_Y` 97 ± `SEP_DY` 7, `SEP_R` 2, in the tube 2 / tube 3 gap — all four
-generated into `source/Layout.mc`. Its ink comes from `source/TubeInk.mc` (LESSONS L60).
+generated into `source/Layout.mc`. Its ink comes from `source/TubeInk.mc` (LESSONS L60), and the tube digits' wire is drawn in three passes from the user's own hex ladder - yellow body, cream core (an eroded twin font), and an outer fade carried by a third font whose glyph coverage IS the 4 px alpha ramp (LESSONS L69-L70).
 
 ### The original uniform transform (history)
 
