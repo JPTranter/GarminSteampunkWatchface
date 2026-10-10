@@ -167,17 +167,25 @@ GLASS_GAMMA = 1.35               # mid-tone push-down; higher = darker, clearer 
 # user's reference photo reads as much by its honeycomb as by its colour. 0 = off. Visibility
 # follows the digit's own haze (MESH_GAIN), so the mesh lights up with the glow instead of being a
 # uniform printed texture.
-MESH_ALPHA = 0.55
-MESH_RGB = (1.0, 0.72, 0.42)
+# The user asked for the mesh to read as a LIGHTER RED behind the digits: d05227. That is the mesh
+# drawn as coloured light (MESH_DARKEN = 0) with MESH_RGB set to that colour in as-seen space - the
+# baked art is pre-corrected on the way out, so the panel shows the requested colour. Measured on the
+# rendered frame, the wires ADD (105,43,22) at their peaks against 0.6 px wires: about half the
+# requested colour, because a 0.6 source-px wire only part-covers a pixel. The cost is legibility,
+# measured on the eroded glyph core: the darkening mesh held 11.5:1, this holds 6.6:1 at
+# MESH_ALPHA 1.5 (and 5.8:1 at 2.0, below this project's bar). Widening MESH_W_SRC is the other way
+# to deepen the colour, at a similar contrast price.
+MESH_ALPHA = 1.5
+MESH_RGB = (0.816, 0.322, 0.153)   # (208, 82, 39) = d05227
 MESH_R_SRC = 5.35                # hexagon circumradius on the 1024 grid (~14 cells across a tube)
 MESH_W_SRC = 0.6                 # wire width, source px (drawn supersampled, see _hex_mesh)
 MESH_SS = 6                      # supersampling factor for the mesh mask
 MESH_GAIN = 1.6                  # how strongly the local haze brightens the mesh
 MESH_BASE = 0.10                 # how visible the mesh is away from the glow
-# The wires can be drawn either as light added to the glass (glow, the reference's own look on its
-# bright glass) or as an OCCLUDER that darkens the glass behind them. Darkening is what buys digit
-# contrast on our near-black glass, so it is the default; MESH_RGB is unused in that mode.
-MESH_DARKEN = 1.0
+# 1.0 = the wires occlude (darken) the glass, 0 = they are drawn as coloured light. The occluder
+# polarity is what buys digit contrast on a near-black field; the user's request for a lighter red
+# mesh is the coloured-light polarity, so this ships as 0 and MESH_RGB is live.
+MESH_DARKEN = 0.0
 # How much the tube's interior glass is LIT (0 = the current near-black glass). The reference
 # photo's tubes are bright amber, interior luminance ~0.33 against a 0.89 digit - which is what
 # actually makes that picture read as it does, far more than the mesh.
