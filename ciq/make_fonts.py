@@ -58,12 +58,22 @@ def render_glyph(ch, px, condense, source=SERIF_BD, thin=0, thick=0):
     return g.resize((w, g.height), Image.LANCZOS)
 
 
-def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=0):
-    """specs: list of (char, codepoint). Packs glyphs left-to-right, wrapping at 512 px."""
+def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=0, erode=0):
+    """specs: list of (char, codepoint). Packs glyphs left-to-right, wrapping at 512 px.
+
+    `erode` (after the crop) thins the SAME glyphs without touching their box, so a font built with it
+    has identical metrics to the one it is derived from and lands concentrically on it — the mechanism
+    for drawing a hot centre line inside a wire (built, measured, and dropped in favour of painting the
+    whole stroke white with an orange rim: at a 5 px stroke an eroded core is only ~1 px and barely
+    reads). Keep it as the knob if the thin-core look is ever wanted: `thin` cannot do this job,
+    because it re-crops to the smaller bbox and the two fonts' line heights and advances then differ.
+    """
     glyphs = []
     for ch, cp in specs:
         g = render_glyph(ch, px, condense, source, thin, thick)
         if g is not None:
+            if erode > 0:
+                g = g.filter(ImageFilter.MinFilter(2 * erode + 1)).filter(ImageFilter.GaussianBlur(0.5))
             glyphs.append((ch, cp, g))
     if not glyphs:
         raise SystemExit(f"{name}: no glyphs rendered")

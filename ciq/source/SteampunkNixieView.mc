@@ -232,8 +232,8 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         if (GLOW_RAD2 > GLOW_RAD1) {
             drawHalo(dc, x, y, font, text, GLOW_RAD2, INK_GLOW2);
         }
-        drawHalo(dc, x, y, font, text, GLOW_RAD1, INK_GLOW1);
-        centred(dc, x, y, font, text, INK_TIME);
+        drawHalo(dc, x, y, font, text, GLOW_RAD1, INK_GLOW1);   // the wire's orange rim
+        centred(dc, x, y, font, text, INK_TIME);                // the wire itself: white-hot
     }
 
     //! One square halo ring at `radius`: every offset on the ring, but nothing inside it.

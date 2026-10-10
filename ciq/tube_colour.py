@@ -26,18 +26,21 @@ GEN_MC = os.path.join(HERE, "source", "TubeInk.mc")
 
 # Target colours AS SEEN ON THE WATCH (sRGB, before the AMOLED pre-correction).
 INK_TARGET = {
-    # The wire is a single hot cathode. Measured off the user's second reference (the AI face render,
-    # a warm amber tube band): core (245,155,30) at hue 35 deg / L 0.63, stroke body (182,102,22) at
-    # hue 30 / L 0.44, the glow spilling into the glass (117,61,11) at hue 28 / L 0.27.
+    # The wire is ONE glyph pass: INK_TIME is the wire itself, and INK_GLOW1 (the 1 px band painted
+    # under it) is its orange rim, so the stroke reads white-hot with a warm edge — the user's "the
+    # center part of the clock digit should be more towards white". A two-pass version was built
+    # first (orange glyph + a 1 px-eroded white glyph over it) and measured: at a 5 px stroke the
+    # eroded core is ~1 px and barely visible, so the whole stroke is white and the rim comes from the
+    # band. Measured off the user's second reference (a warm amber tube band): core (245,155,30) at
+    # hue 35 deg / L 0.63, stroke body (182,102,22) at hue 30 / L 0.44, the glow into the glass at
+    # (117,61,11).
     #
     # The core first shipped one step HOTTER than that (252,196,96) to buy contrast - 7.5:1 against
     # the amber glass where the exact reference match measures 6.2:1 - and the user, looking at the
     # watch, overruled the trade: "The time display is not orange enough. It should be like the
-    # reference." A device observation is the only measurement taken from the panel, so the core is
-    # now the reference's own (245,155,30): ink as seen (242,145,32), hue 32 deg / sat 0.87 against the
-    # reference's 35 / 0.88, still 6.2:1 on the glyph core with a 5 px stroke. The ring stays as it is,
-    # because it is also what the separator dots and the halo edge read as.
-    "INK_TIME": (245, 155, 30),     # core: the reference's own saturated orange
+    # reference." A device observation is the only measurement taken from the panel, so the wire body
+    # is now the reference's own (245,155,30), still 6.2:1 on the glyph core with a 5 px stroke.
+    "INK_TIME": (255, 248, 232),    # the wire: white-hot, warmer than white so it stays a filament
     # The glow is STATIC at the bright baseline (user decision): the ring no longer pulses, so it is
     # stored at the colour the pulse used to reach at its peak. No headroom is needed now that
     # nothing scales it. A 1 px halo around the glyph is most of what the digit's colour IS at this

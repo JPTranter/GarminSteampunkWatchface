@@ -132,7 +132,7 @@ def glowing(canvas, consts, font, text, x, y):
     if consts["GLOW_RAD2"] != consts["GLOW_RAD1"]:
         ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], consts["INK_GLOW2"])
     ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], consts["INK_GLOW1"])
-    centred(canvas, consts, font, text, x, y, consts["INK_TIME"])
+    centred(canvas, consts, font, text, x, y, consts["INK_TIME"])       # the wire: white-hot
 
 
 # ---------------------------------------------------------------- the discharge (Discharge.mc)

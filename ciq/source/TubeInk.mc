@@ -3,7 +3,7 @@
 // the panel shows is the target colour in tube_colour.py. Painted outer ring -> inner ring -> core.
 import Toybox.Lang;
 
-const INK_TIME = 0xF6B731;
+const INK_TIME = 0xFFE9D6;
 const INK_GLOW1 = 0xDA972E;
 const INK_GLOW2 = 0x662C0F;
 const INK_GLOW3 = 0x3E190A;
