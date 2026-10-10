@@ -45,9 +45,13 @@ OLD_SCALE = 0.3365  # the previous uniform fit; the fonts scale by ST/OLD_SCALE 
 # Text centre points ON THE 1024 GRID, with the band each belongs to. These are the coordinates
 # that shipped under the old 0.3365 transform — including every hand nudge recorded in the view —
 # mapped back to the source, so the nudges survive the change of scale.
+# The tube digits sit 2 SCREEN px higher than measured (user request): the digit centre is stored on
+# the source grid, so the nudge is 2 / ST = 4.3 source px and survives any later zoom. The separator
+# (SEP_Y) is derived from TIME_Y, so it lifts with them.
+_TUBE_Y_SRC = 255.6 - 2 / ST
 POINTS = {
-    "tube1": (282.3, 255.6, "top"), "tube2": (439.8, 255.6, "top"),
-    "tube3": (579.5, 255.6, "top"), "tube4": (745.9, 255.6, "top"),
+    "tube1": (282.3, _TUBE_Y_SRC, "top"), "tube2": (439.8, _TUBE_Y_SRC, "top"),
+    "tube3": (579.5, _TUBE_Y_SRC, "top"), "tube4": (745.9, _TUBE_Y_SRC, "top"),
     "steps1": (445.8, 600.3, "bot"), "steps2": (505.2, 591.4, "bot"),
     "steps3": (561.7, 591.4, "bot"), "steps4": (618.1, 591.4, "bot"),
 }
@@ -106,7 +110,8 @@ GLASS_HAZE_RGB = (0.62, 0.26, 0.06)
 GLASS_SPEC_RGB = (1.0, 0.94, 0.86)
 GLASS_HAZE_AMP = 0.30           # peak of the digit's haze in the glass
 GLASS_HAZE_SIGMA = (20, 60)     # source px, x and y: tight around the digit, still taller than wide
-GLASS_HAZE_Y_SRC = 255.6        # the digit centre the haze is centred on (POINTS tube1..4)
+GLASS_HAZE_Y_SRC = _TUBE_Y_SRC  # the digit centre the haze is centred on: it follows the wire's
+                                # 2 px lift above, so the baked tint moves with the ink that lights it
 # The envelope's own CAST: a per-channel gain applied to the artwork's luminance. It replaced the AI
 # art's gold with a cool blue cast, and the user's reference (a warm amber tube render) then asked for
 # the opposite: the base chroma is what the PANEL re-lights, and the baked haze cannot re-tint the

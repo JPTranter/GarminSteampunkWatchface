@@ -58,7 +58,7 @@ def render_glyph(ch, px, condense, source=SERIF_BD, thin=0, thick=0):
     return g.resize((w, g.height), Image.LANCZOS)
 
 
-def halo_mask(g, d0, d1, pad):
+def halo_mask(g, d0, d1, pad, curve="log"):
     """The glyph's OUTER fade as an 8-bit coverage mask: alpha 1 at d0 px from the stroke, falling
     linearly to 0 at d1, and 0 inside d0, on a canvas padded by `pad` so the fade is not clipped.
     Padding every glyph by the same amount keeps this font's advances and line height in step with the
@@ -71,10 +71,23 @@ def halo_mask(g, d0, d1, pad):
     """
     import cv2
     import numpy as np
-    a = (np.asarray(g, np.uint8) > 127).astype(np.uint8) * 255
+    # > 0, not > 127: the glyph's anti-aliased skirt is part of the stroke as the eye sees it, and
+    # binarising at the midpoint measures every distance ~1 px too far out.
+    a = (np.asarray(g, np.uint8) > 0).astype(np.uint8) * 255
     d = cv2.distanceTransform(255 - a, cv2.DIST_L2, 5)       # px from the stroke edge
-    alpha = np.clip((d1 - d) / float(d1 - d0), 0, 1)
-    alpha[d <= d0] = 0
+    t = np.clip((d - d0) / float(d1 - d0), 0, 1)             # 0 at the edge, 1 at the end of the fade
+    if curve == "log":
+        # logarithmic: alpha = 1 - log(1 + k t) / log(1 + k), so it drops fast just outside the wire
+        # and then lingers - 1.00 / 0.49 / 0.26 / 0.06 / 0.00 at t = 0, .25, .5, .75, 1 against the
+        # linear ramp's 1.00 / 0.75 / 0.50 / 0.25 / 0.00. User request ("make the alpha falloff
+        # logarithmically, not linear").
+        k = 9.0
+        alpha = 1.0 - np.log1p(k * t) / float(np.log1p(k))
+    elif curve == "exp":
+        alpha = np.power(0.5, t / 0.25)                      # halving every quarter of the fade
+    else:
+        alpha = 1.0 - t
+    alpha[d < d0] = 0
     m = Image.fromarray((alpha * 255).astype(np.uint8), "L")
     big = Image.new("L", (m.width + 2 * pad, m.height + 2 * pad), 0)
     big.paste(m, (pad, pad))
@@ -177,11 +190,13 @@ t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP
 h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
                           condense=0.80, source=NIXIE_ONE, erode=1)
 # NixieTimeHalo: the wire's OUTER fade, drawn in the last glow colour (INK_GLOW3). Its glyphs ARE the
-# alpha ramp - solid to 2 px out from the stroke, then blending to nothing 4 px later - so the falloff
-# follows whatever digits are shown and alpha-blends over the background. The user asked for exactly
-# that: "the last colour ... alpha blend over the background for 4 pixels out to nothing".
+# alpha ramp - full brightness at the stroke's edge, LOGARITHMICALLY down to nothing 4 px out - so the
+# falloff follows whatever digits are shown and alpha-blends over the background. The user asked for
+# exactly that: "the last colour ... alpha blend over the background for 4 pixels out to nothing",
+# then "make the alpha falloff logarithmically, not linear". The pad is 5 px so the 4 px fade and its
+# anti-aliased tail both fit inside the glyph box.
 hl_atlas, hl_glyphs = build("NixieTimeHalo", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
-                            condense=0.80, source=NIXIE_ONE, halo=(2.0, 6.0, 7))
+                            condense=0.80, source=NIXIE_ONE, halo=(0.5, 4.5, 5, "log"))
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.
