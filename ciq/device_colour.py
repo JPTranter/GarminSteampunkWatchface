@@ -12,13 +12,26 @@ to zero by 80 deg and below 340 deg) so the blue sparks, the blue lamps and the 
 indicator lamps keep their colour. Blacks are untouched (hue rotation does nothing at V=0, and the
 weight also fades out in the darkest pixels so near-black noise does not pick up a green cast).
 
-The numbers came from ONE phone photo of an older build — treat them as a first estimate and
-confirm on the watch (make_calibration.py builds a side-by-side strip for exactly that).
+RE-CALIBRATED ON THE PANEL (the original 11.0 deg came from one photo and over-rotated): a later
+photo of the watch beside the monitor measured the mid brass matching to 0.0 deg but the brightest
+and darkest warm tones 3-4 deg yellower than the design, so the shift was re-picked by eye off
+`make_calibration.py`'s repeated-band screen, which shows the same hardware pre-corrected at +4, +8,
++11 and +14 deg. The user picked the TOP band: HUE_SHIFT_DEG = 4.0. Note it is the end of that
+ladder, so the true value could be lower still - if the brass reads too red/copper on the wrist,
+calibrate again with a ladder below it (0 / 2 / 4 / 6).
+
+The SAT_SCALE value is still the original estimate (0.90 from 0.65 vs 0.58); the same photo
+suggested it is also slightly over-trimmed (the panel measured +0.13 saturation on warm pixels).
+It is a separate axis and can be calibrated the same way.
+
+Judge a calibration screen ON THE WATCH, against real brass - not against the monitor's own copy of
+it: each band carries its own pre-rotation, so only the band matching the assumed shift shows the
+design colours there.
 """
 import numpy as np
 from PIL import Image
 
-HUE_SHIFT_DEG = 11.0   # measured: watch 17 deg vs monitor 28 deg for the same brass
+HUE_SHIFT_DEG = 4.0    # re-calibrated on the panel (see below), not the 11.0 of the original photo
 SAT_SCALE = 0.90       # measured: watch 0.65 vs monitor 0.58 saturation
 
 

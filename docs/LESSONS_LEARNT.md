@@ -701,3 +701,25 @@ cause: the AI-drawn artwork is not regular, and what is behind the glow decides 
   ~2 px, so the approved nudge was NOT applied - acting on the bad number would have moved a correctly
   placed digit off centre. When measurements disagree by more than the effect, the measurement is the
   finding, and saying so is the deliverable.
+**L72. A colour correction estimated from ONE photo will over-correct, and the only way to settle it is a
+ladder judged ON THE PANEL.** The AMOLED pre-correction shipped for months with `HUE_SHIFT_DEG = 11`
+taken from a single phone photo. A later photo with the watch and the monitor in one frame showed the
+residual: the mid brass matched to 0.0 deg, but the brightest and darkest warm tones came out 3-4 deg
+yellower and 0.1-0.2 more saturated on the panel - i.e. the rotation was about a third too much.
+
+- **The calibration instrument is a repeated band, not a sliced frame.** `make_calibration.py` used to
+  cut one frame into four vertical slices; each strip then showed *different hardware*, which cannot be
+  compared like for like. It now repeats the SAME brass-rich band (screen rows 96..196) four times down
+  the screen, each pre-corrected at its own shift - so the differences a viewer sees are entirely the
+  shift. The user picked the top of the `+4 / +8 / +11 / +14` ladder in seconds.
+- **Judge it on the watch, against a real reference object - never against the monitor's copy of the
+  same file.** Every band on screen carries its own pre-rotation, so on the monitor only the band that
+  happens to match the assumed shift shows the design colours; a monitor-vs-watch comparison measures
+  the panel's shift, not the right answer.
+- **When the pick lands on the END of the ladder, the ladder was too narrow in that direction.** The
+  answer here is `<= 4 deg`, so the honest follow-up (if the brass now reads too copper) is a ladder
+  below it: 0 / 2 / 4 / 6.
+- **The shift is one constant that reaches everything** - baked art and live ink both read
+  `device_colour.correct()`, so `HUE_SHIFT_DEG = 4.0` plus `make.py assets` moves the glass, the brass,
+  the wire and the separator together. Saturation (`SAT_SCALE`, still the original 0.90 estimate) is a
+  SEPARATE axis and is calibrated the same way, one axis at a time.
