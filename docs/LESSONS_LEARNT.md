@@ -513,3 +513,23 @@ Both were built, measured and then dropped — neither is on the face now.
 - **Measure from the frame you are measuring.** Points read off the shipping frame must be inverted
   through the SHIPPING transform. Using `_unmap` (which inverts layout C, the older 0.95 zoom) put the
   spark emitters and their band 5 % off — a whole tuning pass went into a geometry error.
+
+**L64. Readability on the device outranks the look that was chosen on the screen.** The tube digits
+shipped THIN — `make_fonts.py` eroded Nixie One by 1 px per side to match a reference photograph of a
+wire cathode — and the user reported them "really hard to read on the device". Measured on the
+rendered frame (glyph ink plus its 1 px halo, as the eye sees it): 4.2 px stroke at 5.0:1 contrast
+against the glass. Natural weight is 6.2 px at 6.2:1 and one step fatter again (`thick=1`) is 9.0 px
+at 6.6:1. The eroded stroke was ~3 px of glyph at 74 px ink, and the AMOLED plus the panel's own
+small-pixel behaviour washed it out — a 3 px line is not a wire at arm's length, it is a gap.
+
+Consequences worth keeping:
+
+- **Weight and colour are the two cheapest readability levers, and both are font/ink changes, not
+  layout changes.** A reference photograph is a stand-in for taste, not a measurement of what a
+  panel can show; prototype the weight on the device before adopting it.
+- **The 1 px halo IS most of the digit's colour at this size.** With a 3-6 px stroke, a ring at
+  radius 1 covers the outer pixels of the stroke, so the digit reads as the RING colour around a
+  thin pale core — which is why "make the digits redder" was a change to `INK_GLOW1`, not to the core
+  in `INK_TIME`. (Same finding as L63's separator dots, from the other direction.)
+- **`thin`/`thick` are one argument each on the font generator**, so going back is a one-line change
+  plus `make.py assets`, not a redesign.
