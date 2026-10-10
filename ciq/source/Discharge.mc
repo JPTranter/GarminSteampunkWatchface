@@ -12,6 +12,8 @@ const FRAME_MS = 100;          // animation tick while awake (Timer minimum is 5
 // (ARC_Y_MIN/MAX) are GENERATED into Layout.mc - measured once on the tube-tip knobs and mapped
 // through the current layout. Channels 0-2 jump knob-to-knob across the three gaps above the
 // domes; 3 and 4 discharge from the outer knobs to the screen edge.
+// ARC_TUBE_A/B document that wiring. Nothing reads them any more: the tubes' glow stopped pulsing
+// per tube, so there is no "a spark touched this tube" state left to flare (user decision, L63).
 const ARC_TUBE_A = [0, 1, 2, 0, 3];      // the tube each end touches (-1: the case)
 const ARC_TUBE_B = [1, 2, 3, -1, -1];
 const ARC_ON_MIN = 1;                    // frames a strike lasts (re-jittered every frame)
@@ -26,53 +28,36 @@ const ARC_BLOOM = 0x2F6EA8;
 const ARC_SHEATH = 0x7AB6F7;
 const ARC_CORE = 0xEAF6FF;
 
-// Glow pulse: the halo rings of each tube breathe between PULSE_MIN..PULSE_MAX % of their
-// static brightness — each tube holds a target for PULSE_HOLD_MIN..MAX frames and eases toward
-// it (1/4 per frame), so it reads as a gas glow breathing rather than per-frame noise — and
-// FLASH to PULSE_FLARE the instant an arc touches that tube, then fade back. The first range
-// (78..100 %, flare 140 %, re-drawn every frame) was invisible on the watch: the rings are dark
-// blues, so a +-20 % swing moved them by a few levels. Only the HALO moves — the core glyph stays fixed so the time keeps
-// its contrast (LESSONS L37: the halo carries the colour; the core carries the contrast).
-const PULSE_MIN = 35;
-const PULSE_MAX = 120;
-const PULSE_FLARE = 260;
-const PULSE_HOLD_MIN = 3;
-const PULSE_HOLD_MAX = 8;
-
-//! The nixie discharge: arc flicker between the tube tips plus the per-tube glow pulse.
+//! The nixie discharge: arc flicker between the tube tips.
 //!
 //! Deterministic by design: a 31-bit LCG seeded once, advanced only by step(), so a given frame
 //! number always produces the same picture — which is what lets preview.py reproduce it.
+//!
+//! This class also carried a per-tube GLOW PULSE: the halo rings breathed 35..120 % and flared to
+//! 260 % the instant a spark touched a tube, with the hue-preserving cap LESSONS L61 describes. The
+//! user removed it — a static bright glow reads cleaner, the flare was never worth the extra state,
+//! and the tube glow is now the fixed baseline colour in source/TubeInk.mc.
 class Discharge {
 
     private var _seed as Number;
     private var _timer as Array<Number>;   // frames left in the current on/off phase
     private var _on as Array<Boolean>;
-    private var _pulse as Array<Number>;   // per-tube halo brightness, %
-    private var _target as Array<Number>;  // the level each tube is easing toward
-    private var _hold as Array<Number>;    // frames before that tube picks a new target
 
     function initialize() {
         _seed = 20261010;
         _timer = [0, 0, 0, 0, 0];
         _on = [false, false, false, false, false];
-        _pulse = [100, 100, 100, 100];
-        _target = [100, 100, 100, 100];
-        _hold = [0, 0, 0, 0];
         // stagger the first strikes so the channels do not fire together on wake
         for (var k = 0; k < ARC_AX.size(); k += 1) {
             _timer[k] = between(1, ARC_OFF_MAX);
         }
     }
 
-    //! The resting state: no arcs, halos at 100 %. Used whenever the animation is not running,
-    //! so a once-a-minute redraw never freezes a half-drawn strike on the screen.
+    //! The resting state: no arcs. Used whenever the animation is not running, so a once-a-minute
+    //! redraw never freezes a half-drawn strike on the screen.
     function reset() as Void {
         for (var k = 0; k < _on.size(); k += 1) {
             _on[k] = false;
-        }
-        for (var i = 0; i < _pulse.size(); i += 1) {
-            _pulse[i] = 100;
         }
     }
 
@@ -86,7 +71,7 @@ class Discharge {
         return lo + next() % (hi - lo + 1);
     }
 
-    //! Advance one frame: the arc state machines, then the pulse.
+    //! Advance one frame: the arc state machines.
     function step() as Void {
         for (var k = 0; k < _timer.size(); k += 1) {
             _timer[k] -= 1;
@@ -96,56 +81,6 @@ class Discharge {
                                    : between(ARC_OFF_MIN, ARC_OFF_MAX);
             }
         }
-        for (var i = 0; i < _pulse.size(); i += 1) {
-            _hold[i] -= 1;
-            if (_hold[i] <= 0) {
-                _target[i] = between(PULSE_MIN, PULSE_MAX);
-                _hold[i] = between(PULSE_HOLD_MIN, PULSE_HOLD_MAX);
-            }
-            if (touched(i)) {
-                _pulse[i] = PULSE_FLARE;                         // instant flash ...
-            } else {
-                _pulse[i] = (_pulse[i] * 3 + _target[i]) / 4;    // ... then ease back
-            }
-        }
-    }
-
-    private function touched(tube as Number) as Boolean {
-        for (var k = 0; k < _on.size(); k += 1) {
-            if (_on[k] && (ARC_TUBE_A[k] == tube || ARC_TUBE_B[k] == tube)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    //! A halo colour scaled by this tube's current pulse.
-    //!
-    //! The scale is CAPPED at the value that just reaches 255 in the colour's brightest channel.
-    //! Multiplying the channels and clamping them instead (the first version) shifts the HUE: a
-    //! saturated orange like 0xFF7626 clipped its red and green to 255 when the glow flared, so the
-    //! digit's glow turned yellow exactly when it got boldest (user: "when the number becomes more
-    //! bold, its colour should only change slightly - now it becomes too yellow"). Capping the
-    //! multiplier means the pulse changes brightness only, and the hue cannot drift.
-    function haloColour(tube as Number, colour as Number) as Number {
-        var p = _pulse[tube];
-        var r = (colour >> 16) & 0xFF;
-        var g = (colour >> 8) & 0xFF;
-        var b = colour & 0xFF;
-        var mx = (r > g) ? ((r > b) ? r : b) : ((g > b) ? g : b);
-        if (mx > 0) {
-            var cap = (255 * 100) / mx;          // % that lands exactly on 255
-            if (p > cap) {
-                p = cap;
-            }
-        }
-        r = (r * p) / 100;
-        g = (g * p) / 100;
-        b = (b * p) / 100;
-        r = (r > 255) ? 255 : r;
-        g = (g > 255) ? 255 : g;
-        b = (b > 255) ? 255 : b;
-        return (r << 16) | (g << 8) | b;
     }
 
     //! Draw every active arc. Each call re-jitters the bolt, so a strike crackles while it lasts.

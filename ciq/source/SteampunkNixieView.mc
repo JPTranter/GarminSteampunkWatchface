@@ -153,7 +153,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
             t.stop();
             _timer = null;
         }
-        _discharge.reset();       // never leave a strike or a flare frozen on a static redraw
+        _discharge.reset();       // never leave a strike frozen on a static redraw
         _beltPhase = 0;           // ... or a half-rolled step digit
     }
 
@@ -214,15 +214,17 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     //! drawText has no alpha and a bitmap font cannot be blurred, so a glow can only be painted as
     //! solid offsets of the same glyph. The far ring goes down first so the near ring, and then the
     //! core, overwrite it — drawing them the other way round leaves the dim ring on top and the digit
-    //! reads as an outlined, unlit glyph. The ring takes this tube's pulse (Discharge.haloColour); the
-    //! core never changes, so contrast is constant. GLOW_RAD2 == GLOW_RAD1 means ONE ring: painting the
-    //! outer one as well would cost 8 more glyph blits per digit per frame for no visible change.
-    private function glowing(dc as Graphics.Dc, tube as Number, x as Number, y as Number,
+    //! reads as an outlined, unlit glyph. The ring is a FIXED bright baseline now (user decision,
+    //! LESSONS L63): it used to pulse with the discharge and flare when a spark struck, which cost a
+    //! hue-preserving cap (L61) to keep it from going yellow for a glow nobody asked to move.
+    //! GLOW_RAD2 == GLOW_RAD1 means ONE ring: painting the outer one as well would cost 8 more glyph
+    //! blits per digit per frame for no visible change.
+    private function glowing(dc as Graphics.Dc, x as Number, y as Number,
                              font as Graphics.FontType, text as String) as Void {
         if (GLOW_RAD2 != GLOW_RAD1) {
-            drawHalo(dc, x, y, font, text, GLOW_RAD2, _discharge.haloColour(tube, INK_GLOW2));
+            drawHalo(dc, x, y, font, text, GLOW_RAD2, INK_GLOW2);
         }
-        drawHalo(dc, x, y, font, text, GLOW_RAD1, _discharge.haloColour(tube, INK_GLOW1));
+        drawHalo(dc, x, y, font, text, GLOW_RAD1, INK_GLOW1);
         centred(dc, x, y, font, text, INK_TIME);
     }
 
@@ -251,7 +253,7 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         var clock = System.getClockTime();
         var digits = [clock.hour / 10, clock.hour % 10, clock.min / 10, clock.min % 10];
         for (var i = 0; i < 4; i += 1) {
-            glowing(dc, i, TIME_X[i], TIME_Y, fontTime(), digits[i].toString());
+            glowing(dc, TIME_X[i], TIME_Y, fontTime(), digits[i].toString());
         }
     }
 
@@ -263,10 +265,11 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         litDot(dc, SEP_X, SEP_Y + SEP_DY, SEP_R);
     }
 
-    //! One lit dot: the digits' own ink, solid, with NO glow ring — the separator is a lamp in the
-    //! gap, not a glyph, and the user asked for it plain.
+    //! One lit dot: the colour the TIME DIGITS read as — their ring, not their hot core. Drawn in
+    //! INK_TIME the dots looked yellow against orange digits (user), and the separator is a lamp in
+    //! the gap rather than a glyph, so it is a plain dot with no glow ring.
     private function litDot(dc as Graphics.Dc, x as Number, y as Number, r as Number) as Void {
-        dc.setColor(INK_TIME, Graphics.COLOR_TRANSPARENT);
+        dc.setColor(INK_GLOW1, Graphics.COLOR_TRANSPARENT);
         dc.fillCircle(x, y, r);
     }
 

@@ -258,6 +258,15 @@ SHIP = Layout("split", ST, SB, TOP_Y)
 _C = Layout("C", 0.49, 0.43, 0)
 
 
+def _src_from_screen(sx, sy, band, lay=SHIP):
+    """Inverse of Layout.map for a point measured ON THE SHIPPING FRAME. `_unmap` below inverts
+    layout C instead - right for the constants that were measured there, wrong (by the 0.95 zoom)
+    for anything read off the current screen."""
+    if band == "top":
+        return (sx - 160) / lay.st + CX, (sy - lay.oy) / lay.st
+    return (sx - 160) / lay.sb + CX, (sy - lay.seam_y) / lay.sb + SEAM
+
+
 def _unmap(sx, sy, band, lay=_C):
     if band == "top":
         return (sx - 160) / lay.st + CX, (sy - lay.oy) / lay.st

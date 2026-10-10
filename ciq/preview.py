@@ -121,10 +121,12 @@ def ring(canvas, consts, font, text, x, y, radius, colour):
             centred(canvas, consts, font, text, x + dx, y + dy, colour)
 
 
-def glowing(canvas, consts, font, text, x, y, tube=0, discharge=None):
-    halo = (lambda c: discharge.halo_colour(tube, c)) if discharge else (lambda c: c)
-    ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], halo(consts["INK_GLOW2"]))
-    ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], halo(consts["INK_GLOW1"]))
+def glowing(canvas, consts, font, text, x, y):
+    """Mirror of the view's glowing(): the two static halo rings (outer first) under the core. The
+    rings no longer pulse - the glow is a fixed bright baseline."""
+    if consts["GLOW_RAD2"] != consts["GLOW_RAD1"]:
+        ring(canvas, consts, font, text, x, y, consts["GLOW_RAD2"], consts["INK_GLOW2"])
+    ring(canvas, consts, font, text, x, y, consts["GLOW_RAD1"], consts["INK_GLOW1"])
     centred(canvas, consts, font, text, x, y, consts["INK_TIME"])
 
 
@@ -140,9 +142,6 @@ class Discharge:
         n = len(c["ARC_AX"])
         self.timer = [0] * n
         self.on = [False] * n
-        self.pulse = [100] * 4
-        self.target = [100] * 4
-        self.hold = [0] * 4
         for k in range(n):
             self.timer[k] = self.between(1, c["ARC_OFF_MAX"])
 
@@ -161,29 +160,6 @@ class Discharge:
                 self.on[k] = not self.on[k]
                 self.timer[k] = (self.between(c["ARC_ON_MIN"], c["ARC_ON_MAX"]) if self.on[k]
                                  else self.between(c["ARC_OFF_MIN"], c["ARC_OFF_MAX"]))
-        for i in range(4):
-            self.hold[i] -= 1
-            if self.hold[i] <= 0:
-                self.target[i] = self.between(c["PULSE_MIN"], c["PULSE_MAX"])
-                self.hold[i] = self.between(c["PULSE_HOLD_MIN"], c["PULSE_HOLD_MAX"])
-            if self.touched(i):
-                self.pulse[i] = c["PULSE_FLARE"]
-            else:
-                self.pulse[i] = (self.pulse[i] * 3 + self.target[i]) // 4
-
-    def touched(self, tube):
-        return any(self.on[k] and (self.c["ARC_TUBE_A"][k] == tube or self.c["ARC_TUBE_B"][k] == tube)
-                   for k in range(len(self.on)))
-
-    def halo_colour(self, tube, colour):
-        """Mirror of Discharge.haloColour: the scale is capped at the value that just reaches 255 in
-        the brightest channel, so the pulse changes brightness without shifting the hue."""
-        p = self.pulse[tube]
-        r, g, b = (((colour >> s) & 0xFF) for s in (16, 8, 0))
-        mx = max(r, g, b)
-        if mx:
-            p = min(p, 255 * 100 // mx)
-        return (min(r * p // 100, 255) << 16) | (min(g * p // 100, 255) << 8) | min(b * p // 100, 255)
 
     def clamp_y(self, y):
         return min(max(y, float(self.c["ARC_Y_MIN"])), float(self.c["ARC_Y_MAX"]))
@@ -261,16 +237,16 @@ def belt_digits(face, consts, font, frm, to, phase):
         del win
 
 
-def separator(canvas, consts, discharge=None):
-    """Mirror of SteampunkNixieView.drawSeparator/litDot: two solid dots in the digits' own ink, no
-    glow ring (the separator is a lamp in the gap, not a glyph, so it takes no part in the pulse)."""
+def separator(canvas, consts):
+    """Mirror of SteampunkNixieView.drawSeparator/litDot: two solid dots in the colour the digits
+    READ as - their ring, INK_GLOW1 - not the yellow of their hot core. No glow ring."""
     from PIL import ImageDraw
     d = ImageDraw.Draw(canvas)
     r = consts["SEP_R"]
     for dy in (-consts["SEP_DY"], consts["SEP_DY"]):
         y = consts["SEP_Y"] + dy
         d.ellipse([consts["SEP_X"] - r, y - r, consts["SEP_X"] + r, y + r],
-                  fill=rgb(consts["INK_TIME"]))
+                  fill=rgb(consts["INK_GLOW1"]))
 
 
 def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, background=None,
@@ -302,8 +278,8 @@ def render(mock=True, sleep=False, consts=None, discharge=None, hr=None, backgro
         discharge.draw(face)        # as onUpdate: over the background, under every readout
     for i, d in enumerate("%02d%02d" % (hh, mm)):
         # The glow is painted back-to-front: far ring, near ring, then the core glyph on top.
-        glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"], i, discharge)
-    separator(face, consts, discharge)          # the hours/minutes colon, as the view draws it
+        glowing(face, consts, f_time, d, consts["TIME_X"][i], consts["TIME_Y"])
+    separator(face, consts)                     # the hours/minutes colon, as the view draws it
 
     frm, to, phase = belt if belt else (belt_text(steps), belt_text(steps), 0)
     belt_digits(face, consts, f_step, frm, to, phase)
