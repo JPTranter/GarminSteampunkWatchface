@@ -1,5 +1,18 @@
 # Steampunk Watch Face: 3D Render & Garmin Venu Sq 2 Deployment Plan
 
+> **Status: superseded plan, kept as the record of what was explored.** Written before any watch
+> code existed, this describes the all-Blender route and a file layout that the shipped project does
+> not use (`bg_base.png`, `resources/images/`, `SteampunkView.mc`). What actually shipped is the 2D
+> artwork pipeline: the supplied brass background is fitted, re-lit and AMOLED-corrected by
+> `ciq/prepare_artwork.py` / `prepare_resources.py`, with the components drawn as generated
+> resources — see [`ciq/LAYOUT.md`](ciq/LAYOUT.md), [`docs/LESSONS_LEARNT.md`](docs/LESSONS_LEARNT.md)
+> and the live project state in [`README.md`](README.md) / [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
+> The Blender component loop got as far as the assembled scene recorded in
+> [`docs/component-review-log.md`](docs/component-review-log.md); its outputs live in the private
+> pre-publication history, not this repo (LESSONS L53). The *constraints* in Part 2 and the
+> Connect IQ facts it asserts still hold and are superseded in detail by
+> [`plugindocs/CONNECTIQ_FACTS.md`](plugindocs/CONNECTIQ_FACTS.md).
+
 This document outlines the complete plan to produce the 3D-rendered steampunk components from the reference image ([`reference/nixie_moodboard_arcs.png`](reference/nixie_moodboard_arcs.png)) and deploy them as a fully functional watch face on a physical Garmin Venu Sq 2 device.
 
 ---

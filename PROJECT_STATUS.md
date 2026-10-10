@@ -1,8 +1,17 @@
 # Steampunk Watch Face — Garmin Venu Sq 2 — Project Status
 
-_Last updated: round 6 complete. Ledger: **60 / 100 iterations spent.** Stop condition met
-(the reviewer returned all-approved verdicts in rounds 3, 4, 5 and 6). Remaining 40
-iterations are unspent and available on request._
+_**Historic:** the generative design loop that produced the face. Current state is in
+[`README.md`](README.md): the face is finished and shipped as **v1.1.0**, with the Connect IQ
+Store submission prepared in [`docs/store/SUBMISSION.md`](docs/store/SUBMISSION.md). This document
+records the loop itself — ledger **60 / 100 iterations spent**, stop condition met (the reviewer
+returned all-approved verdicts in rounds 3, 4, 5 and 6), remaining 40 iterations unspent and
+available on request._
+
+*Note on paths: this document names the loop's own artifacts (`iterations/`, `reviews/`, `spikes/`,
+`reference/crops/`, `hybrid/FINAL_3D_face.png`) and one third-party reference photo
+(`reference/devon_tread1_steampunk.png`). They belong to the private pre-publication history and are
+deliberately not in this repo — see LESSONS L53 in [`docs/LESSONS_LEARNT.md`](docs/LESSONS_LEARNT.md).
+The layout that actually shipped is [`ciq/LAYOUT.md`](ciq/LAYOUT.md).*
 
 ## Deliverable
 Steampunk watch-face mockups, 320 x 360 PNG, one per iteration, for the Garmin Venu Sq 2

@@ -1,5 +1,10 @@
 # REVIEW LOG — component loop (reviewed every iteration)
 
+*Historic record of the 3D/Blender component loop that was explored before the shipped face (see
+[`PLAN_3D_AND_DEPLOYMENT.md`](../PLAN_3D_AND_DEPLOYMENT.md)). The render paths it names
+(`hybrid/attempts/`, `reference/crops/`, `nixie_top_view.png`) belong to the private
+pre-publication history and are not in this repo — the reason is LESSONS L53.*
+
 Process change: one render, then a review of *that* render, then one specific change. No numbers or
 legibility targets yet — the goal at this stage is that each structural component has the **wow**
 factor and reads like `reference/nixie_moodboard_arcs.png`.
@@ -684,7 +689,7 @@ natural next pass, along with the digits' size (they measure 28-32 px here again
 ## ASSEMBLY — face attempt 023 (nixie_top_view 3D alignment)
 
 **Changes tested:**
-1. Aligned 3D mechanical components with the [`reference/nixie_top_view.png`](reference/nixie_top_view.png) technical blueprint:
+1. Aligned 3D mechanical components with the `reference/nixie_top_view.png` technical blueprint (not in this repo, see the note above):
    - Built multi-tiered concentric cup collars for nixie tube mountings: inner collar lip (`collar_inner_0..3`), turned brass socket wall (`collar0..3`), and outer stepped bevel base ring (`collar_outer_0..3`).
    - Extended horizontal 3D manifold shelf backwards in depth (`manifold_deck_rear`, `manifold_deck`, `manifold_deck_lip`) with 4 perimeter hex bolts along the deck edge.
    - Added lateral mounting bracket ears with hemispherical caps on upper manifold and lower chassis flanks (`ear_top_6/314`, `ear_low_6/314`).
