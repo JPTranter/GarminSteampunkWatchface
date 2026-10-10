@@ -3,7 +3,7 @@
 import Toybox.Lang;
 
 // Tube digit centres (the drawers centre each glyph on these).
-const TIME_X = [53, 126, 191, 269];
+const TIME_X = [53, 129, 191, 269];
 const TIME_Y = 95;
 
 // The five step drums: digit centres, each window's clear interior (the belt is clipped to it),
@@ -23,7 +23,7 @@ const DAY_X = 282;
 const DAY_Y = 276;
 
 // The hours/minutes separator (two lit dots in the tube 2 / tube 3 gap).
-const SEP_X = 158;
+const SEP_X = 160;
 const SEP_Y = 95;
 const SEP_DY = 7;
 const SEP_R = 2;

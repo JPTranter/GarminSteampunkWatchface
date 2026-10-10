@@ -49,8 +49,16 @@ OLD_SCALE = 0.3365  # the previous uniform fit; the fonts scale by ST/OLD_SCALE 
 # the source grid, so the nudge is 2 / ST = 4.3 source px and survives any later zoom. The separator
 # (SEP_Y) is derived from TIME_Y, so it lifts with them.
 _TUBE_Y_SRC = 255.6 - 2 / ST
+# Tube 2's digit sits 3 SCREEN px right of that measurement (user: "the 2nd '0' is also too far to
+# the left"). Two of the artwork's own features agree with the eye here where the earlier automatic
+# measurements did not: the tube's internal electrode stem is centred at screen x 128-129 and its wall
+# rims bracket 97..162 (centre 129.5), against the digit's old centre of 126. The hours/minutes
+# separator is DERIVED from these two tube centres (SEP_X in geometry()), so it moves right with them -
+# which is the same "slightly too far to the left" the user reported for the dots, and keeps the
+# separator on the hour|minute boundary by construction rather than by a second hand-nudge.
+_TUBE2_X_SRC = 439.8 + 3 / ST
 POINTS = {
-    "tube1": (282.3, _TUBE_Y_SRC, "top"), "tube2": (439.8, _TUBE_Y_SRC, "top"),
+    "tube1": (282.3, _TUBE_Y_SRC, "top"), "tube2": (_TUBE2_X_SRC, _TUBE_Y_SRC, "top"),
     "tube3": (579.5, _TUBE_Y_SRC, "top"), "tube4": (745.9, _TUBE_Y_SRC, "top"),
     "steps1": (445.8, 600.3, "bot"), "steps2": (505.2, 591.4, "bot"),
     "steps3": (561.7, 591.4, "bot"), "steps4": (618.1, 591.4, "bot"),
