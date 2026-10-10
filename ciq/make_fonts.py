@@ -71,9 +71,16 @@ def halo_mask(g, d0, d1, pad, curve="log"):
     """
     import cv2
     import numpy as np
+    # PAD FIRST, then measure: the ramp must be computed on the padded canvas, because a glyph is
+    # cropped to its tight ink box and the fade lives OUTSIDE that box. Computing it on the cropped
+    # glyph and pasting the result into a padded canvas leaves every outer edge - top, bottom and the
+    # outer sides - with no ramp at all, so the glow reads as horizontal only, which is exactly the
+    # "I don't see it at the top and bottom of the digit" report.
+    big = Image.new("L", (g.width + 2 * pad, g.height + 2 * pad), 0)
+    big.paste(g, (pad, pad))
     # > 0, not > 127: the glyph's anti-aliased skirt is part of the stroke as the eye sees it, and
     # binarising at the midpoint measures every distance ~1 px too far out.
-    a = (np.asarray(g, np.uint8) > 0).astype(np.uint8) * 255
+    a = (np.asarray(big, np.uint8) > 0).astype(np.uint8) * 255
     d = cv2.distanceTransform(255 - a, cv2.DIST_L2, 5)       # px from the stroke edge
     t = np.clip((d - d0) / float(d1 - d0), 0, 1)             # 0 at the edge, 1 at the end of the fade
     if curve == "log":
@@ -88,10 +95,7 @@ def halo_mask(g, d0, d1, pad, curve="log"):
     else:
         alpha = 1.0 - t
     alpha[d < d0] = 0
-    m = Image.fromarray((alpha * 255).astype(np.uint8), "L")
-    big = Image.new("L", (m.width + 2 * pad, m.height + 2 * pad), 0)
-    big.paste(m, (pad, pad))
-    return big
+    return Image.fromarray((alpha * 255).astype(np.uint8), "L")
 
 
 def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=0, erode=0,
