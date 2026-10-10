@@ -285,8 +285,10 @@ DATE_DIAL_SRC = (810, 658)                        # date dial centre (polar-unwr
 # 167 / 190 / 214, clear window y 229..267 (frame at 222 and 268), converted to the 1024 grid.
 DRUM_DIV_SRC = [362.67, 418.98, 472.83, 529.14, 585.44, 644.19]
 DRUM_Y_SRC = (543.67, 636.69)
-BELT_PITCH_SRC = 30 / 0.4085     # digit spacing on the belt: 30 px, so the next/previous digit
-                                 # shows as a ~3 px sliver at the window's top and bottom
+BELT_PITCH_SRC = 32 / 0.4085     # digit spacing on the belt. Was 30 px, which left only ~2 px of
+                                 # clear space between the 28 px digits and showed a fat sliver of the
+                                 # next/previous numeral at the window's edges; the user asked for at
+                                 # least one more px of separation, so 32 px (a 4 px gap).
 RING_R_SRC = 104                                  # ring band centre radius
 RING_CAP_SRC = 11 / 0.43                          # ring letter cap height, in source px
 

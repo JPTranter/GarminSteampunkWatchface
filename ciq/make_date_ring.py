@@ -45,6 +45,11 @@ R_TEXT = _G["RING_R"]
 TOP_SEGS = [223.0, 255.5, 284.5]      # weekday, left -> right
 BOT_SEGS = [137.0, 106.0, 74.0]       # month, left -> right
 CAP_PX = round(_G["RING_CAP"])        # cap height; ~11 px at layout C (band ~15 px deep)
+# Bold by STROKE, not by bolting on another Windows face (Georgia Bold would add to the licensing
+# debt L56 already flags): the glyph is drawn at SS x with an outline, so 0.8 px at the final size.
+# At a 10 px cap that takes Georgia's ~1.2 px stems to ~2 px, which is what makes WED / SEP read
+# from the wrist (user request).
+BOLD_PX = 0.8
 GEORGIA = r"C:\Windows\Fonts\georgia.ttf"
 INK_DIM = (0xFF, 0xD8, 0xA0)           # the view's INK_DIM, as the labels used before
 SS = 6                                 # supersampling for clean rotation
@@ -54,10 +59,12 @@ MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", 
 
 
 def letter(ch, cap_px=CAP_PX):
-    """A glyph mask whose cap height is cap_px, rendered at SS x and tightly cropped."""
+    """A glyph mask whose cap height is cap_px, rendered at SS x, bolded by BOLD_PX, tight-cropped."""
     f = ImageFont.truetype(GEORGIA, int(cap_px * SS / 0.70))   # Georgia cap height ~0.70 em
     c = Image.new("L", (cap_px * SS * 3, cap_px * SS * 3), 0)
-    ImageDraw.Draw(c).text((cap_px * SS, cap_px * SS * 2), ch, font=f, fill=255, anchor="ls")
+    stroke = max(1, round(BOLD_PX * SS))
+    ImageDraw.Draw(c).text((cap_px * SS, cap_px * SS * 2), ch, font=f, fill=255, anchor="ls",
+                           stroke_width=stroke, stroke_fill=255)
     return c.crop(c.getbbox())
 
 

@@ -14,7 +14,7 @@ const DRUM_X0 = [100, 123, 145, 168, 191];
 const DRUM_X1 = [122, 144, 167, 190, 214];
 const DRUM_Y0 = 229;
 const DRUM_Y1 = 267;
-const BELT_PITCH = 30;
+const BELT_PITCH = 32;
 
 // The heart-rate number sits on the HR dial's centre, the day number on the date dial's centre.
 // Both fonts put their ink centre 0.5 px above the y passed to centred(), hence the +0.5.
