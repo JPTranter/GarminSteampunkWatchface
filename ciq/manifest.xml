@@ -7,7 +7,7 @@
       name="@Strings.AppName"
       type="watchface"
       minApiLevel="5.0.0"
-      version="1.1.4">
+      version="1.1.5">
     <iq:products>
       <!-- Venu Sq 2 and Venu Sq 2 Music are SEPARATE device ids with identical specs.
            Listing both, since the SDK device library carries both. -->
