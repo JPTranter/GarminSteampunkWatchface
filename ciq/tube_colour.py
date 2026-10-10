@@ -28,11 +28,16 @@ GEN_MC = os.path.join(HERE, "source", "TubeInk.mc")
 INK_TARGET = {
     # The wire is a single hot cathode. Measured off the user's second reference (the AI face render,
     # a warm amber tube band): core (245,155,30) at hue 35 deg / L 0.63, stroke body (182,102,22) at
-    # hue 30 / L 0.44, the glow spilling into the glass (117,61,11) at hue 28 / L 0.27. The pale
-    # cream core of the blue build read far less saturated than that, so the core moved to the
-    # reference's hot orange - the row rendered at 7.5:1 core-vs-glass against the amber glass, where
-    # the exact reference match measured 6.2:1 and the old pale ink 8.2:1.
-    "INK_TIME": (252, 196, 96),     # core: hot orange-white
+    # hue 30 / L 0.44, the glow spilling into the glass (117,61,11) at hue 28 / L 0.27.
+    #
+    # The core first shipped one step HOTTER than that (252,196,96) to buy contrast - 7.5:1 against
+    # the amber glass where the exact reference match measures 6.2:1 - and the user, looking at the
+    # watch, overruled the trade: "The time display is not orange enough. It should be like the
+    # reference." A device observation is the only measurement taken from the panel, so the core is
+    # now the reference's own (245,155,30): ink as seen (242,145,32), hue 32 deg / sat 0.87 against the
+    # reference's 35 / 0.88, still 6.2:1 on the glyph core with a 5 px stroke. The ring stays as it is,
+    # because it is also what the separator dots and the halo edge read as.
+    "INK_TIME": (245, 155, 30),     # core: the reference's own saturated orange
     # The glow is STATIC at the bright baseline (user decision): the ring no longer pulses, so it is
     # stored at the colour the pulse used to reach at its peak. No headroom is needed now that
     # nothing scales it. A 1 px halo around the glyph is most of what the digit's colour IS at this

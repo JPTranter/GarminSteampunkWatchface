@@ -594,7 +594,13 @@ bounding-box average) is what says which element to change.
   carried (core-vs-glass ratio, stroke px) measured on the ERODED glyph core: pale cream ink 8.2:1,
   the exact reference match 6.2:1, and the shipped row 7.5:1. Matching the glass without matching the
   ink would have left a pale cream wire inside amber glass; matching the reference exactly would have
-  cost the most contrast - so the shipped core is one step hotter than the reference's own.
+  cost the most contrast - so the core first shipped one step hotter (7.5:1 against the retained ring).
+- **The user then overruled that trade on the wrist** - "the time display is not orange enough. It
+  should be like the reference" - and the contrast was not the binding constraint at all: the
+  reference's own core measures 6.2:1 on the glyph core at a 5 px stroke, and the panel called the
+  hotter row pale. Render the rung before shipping it, but take the DIRECTION from the wrist: a device
+  report is the only measurement taken from the panel side, and here it also settled that the RING
+  stays bright (it is what the separator dots and the halo edge read as) while only `INK_TIME` moves.
 
 **L68. The animated side sparks: emit from the PAINTED element's own core, fly the way the user says,
 and mirror the RNG in the device's exact order.** The user asked for the artwork's blue side sparks to
