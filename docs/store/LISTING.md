@@ -9,10 +9,10 @@ A brass steampunk machine with glowing nixie-tube time, a heart-rate zone gauge,
 
 Your time, lit in four glowing nixie tubes on a brass steampunk machine.
 
-- **Nixie-tube time** in discharge blue, with a glow that breathes and flashes.
+- **Nixie-tube time** in thin, wire-like digits glowing inside clear glass tubes.
 - **Electric arcs** crackle between the tube tips for a few seconds every time you raise your wrist.
-- **Heart-rate zone gauge**: a cold-blue-to-red band lights up to your current heart rate, one segment per zone, using your own zones from Garmin Connect.
-- **Odometer step counter** on mechanical drums.
+- **Heart-rate gauge**: lights up to your current rate. Blue below 60 bpm, green from 60, then through your own Garmin Connect zones to red.
+- **Rolling step counter**: five mechanical drums; changed digits roll down into place.
 - **Calendar dial** with the day in the centre and the weekday and month set into its ring.
 - Battery-friendly: animation runs only while the screen is awake, and the always-on mode shows a dim, burn-in-safe time.
 

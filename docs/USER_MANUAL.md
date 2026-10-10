@@ -16,9 +16,9 @@
 
 | Element | What it shows |
 |---|---|
-| Four nixie tubes | The time, as 24-hour `HH MM`, in glowing nixie blue. |
-| Odometer drums | Today's step count (last four digits). |
-| Left gauge | Your current **heart rate**. The coloured band is lit up to your rate, cold blue to red, one fifth of the arc per heart-rate zone. Your zones come from Garmin Connect (*User Settings → Heart Rate Zones*). A resting rate below zone 1 lights nothing. |
+| Four nixie tubes | The time, as 24-hour `HH MM`, in thin glowing nixie digits. |
+| Five drums | Today's step count, up to 99,999. The digits sit on belts; when the count changes while the screen is awake, each changed digit rolls down into place. |
+| Left gauge | Your current **heart rate**. The band is lit up to your rate in seven equal steps: 40–60 bpm (cold blue), 60 bpm to your zone 1 (green, a normal resting rate), then your five zones (green → yellow → orange → red). Your zones come from Garmin Connect (*User Settings → Heart Rate Zones*). |
 | Right dial | The **day** in the centre. The **weekday** is set into the ring above it and the **month** below, one letter per segment. |
 | Arcs and glow | For about 10 s after you raise your wrist, blue sparks crackle between the tube tips and the tubes' glow breathes, flashing when a spark touches it. |
 
@@ -179,6 +179,6 @@ checks for secrets and that the tooling compiles.
 | `Invalid device id specified: 'venusq2m'` | The device isn't downloaded. Open the SDK Manager → Devices → tick Venu Sq 2 / Venu Sq 2 Music. |
 | `make.py push`: *device not found … but it IS on the USB bus* | The watch dropped its MTP connection. Unplug and replug the cable. |
 | The face isn't in the watch-face list | Wrong model's `.prg`, or the copy went somewhere other than `GARMIN\APPS`. |
-| Heart-rate band never lights | Your rate is below zone 1, which is normal at rest. Check your zones in Garmin Connect. |
+| Heart-rate band shows only a little blue | Your rate is below 60 bpm. Green starts at 60. |
 | Colours look yellow-green on the PC | Expected. The shipping artwork is pre-corrected for the AMOLED, which renders warm tones redder. `make.py screenshots` renders the as-seen version. |
 | `monkeydo` seems stuck | It's slow, not hung. Give it several minutes. |

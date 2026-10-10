@@ -395,3 +395,43 @@ pre-commit hooks, a full-history gitleaks CI job that also fails if any key or b
 tracked, belt-and-braces `.gitignore` patterns (`*.pem *.der *.key .env* *.iq /release/`), and
 machine paths written as `%APPDATA%` rather than a home directory. Image metadata was checked too:
 the AI images carry Microsoft's C2PA provenance (generator, timestamps), which was kept on purpose.
+
+**L54. Generate positions from the layout; never hand-carry them.** A 5 % zoom-out touched
+everything measured on the old frame: tube digits, drums, arc endpoints, the HR gauge centre and
+radii, the date dial, the ring radius and the font sizes. Each was converted once from where it
+was measured to the 1024 grid, and `prepare_artwork.geometry()` maps it through the current
+scales into a generated `Layout.mc`. The proof that the refactor was faithful is cheap and
+exact: feed the *old* layout back through `geometry()` and every hand-measured value that shipped
+on it comes out unchanged. A future zoom is one line.
+
+**L55. A gauge must read at the user's normal state, and its colours must follow their mental
+model.** The zone gauge started at zone 1 (~95 bpm), so at rest it lit nothing and looked broken
+on the watch (reported as "does not light up at all"). It then got a below-zone-1 part. The user
+expected **green to start at 60 bpm**: colours keyed to bpm, not to zone fractions. The arc is
+now seven equal parts, 40–60 (blue), 60–zone 1 (green), then the five zones. That keeps the
+baked gradient fixed for every user while 60 bpm lands exactly on the blue/green boundary.
+
+**L56. DECISION — clear blue glass tubes and Nixie One digits (user-approved; matched to a user reference image kept local-only, mockups in
+`ciq/artwork/glass_digits/`).** The art's tubes read as polished brass, with saturation ~120/255
+on the glass walls. Desaturating alone (mockups A–C) made them grey, not glass. What matched the
+user's reference was *re-lighting*: keep luminance, cast it cool blue, push the mid-tones down for
+a clear dark interior, and add the light a real envelope shows. That means a specular streak, a
+faint opposite one, rim light on both walls, a hotspot under the dome, and a blue haze where the
+digit lights the glass. The masks are per-tube rectangles on the 1024 grid, measured on the walls,
+stopping above the collars. The time digits are now **Nixie One** (SIL OFL, `ciq/fonts-src/`):
+thin and even like wire cathodes. Licensing note for a public repo: the remaining bitmap fonts
+(Times New Roman Bold for the other numbers, Georgia for the ring letters) are rasterised Windows
+fonts. Their redistribution is a grey area and they should move to OFL fonts too.
+
+**L57. Rolling step belts: use the art's real geometry, clip per window, animate only awake.**
+The art has five drum windows; the face used four, so counts over 9,999 lost a digit. Each window
+is now a clip rectangle: the digit is drawn with its belt neighbours 30 px above and below,
+showing as slivers at the window edges. A changed digit rolls down one place over six animation
+ticks (ease-out), driven by the same high-power timer as the arcs, and snaps when asleep.
+`preview.py` mirrors the rule frame for frame (`--anim` includes an 8,399 → 8,400 rollover).
+
+**L58. Write multi-file edit scripts to a file; never inline them in a shell heredoc.** Three
+times a heredoc-wrapped Python edit turned `"\n"` into a real newline inside a string literal,
+and the edited file stopped compiling. A script written with the file tool and then run is
+literal, re-runnable and reviewable, and its `assert s.count(a) == 1` per edit catches a stale
+anchor before anything is half-applied.

@@ -13,12 +13,14 @@ tips every time you raise your wrist.**
 
 ## Features
 
-- **Nixie-tube time** in discharge blue. The glow breathes and flashes when a spark strikes.
+- **Nixie-tube time**: thin, wire-like digits (Nixie One) glowing blue inside clear glass
+  tubes, with a glow that breathes and flashes when a spark strikes.
 - **Electric arcs** jump between the tube tips for the ~10 s after a wrist raise. The animation
   runs only while the screen is awake.
-- **Heart-rate zone gauge**: a cold blue → green → orange → red band lit up to your current rate,
-  one fifth of the arc per zone, using **your own zones** from Garmin Connect.
-- **Odometer step counter** on mechanical drums.
+- **Heart-rate gauge**: a band lit up to your current rate. It's cold blue below 60 bpm, turns
+  green at 60, then runs yellow → orange → red through **your own zones** from Garmin Connect.
+- **Rolling step counter**: five mechanical drums whose digits sit on belts. When your count
+  changes, each changed digit rolls down into place.
 - **Calendar dial**: the day in the centre, the weekday and month set one letter per segment into
   the dial's ring.
 - **Always-on safe**: when idle, the face shows a small dim time, so the AMOLED's burn-in
