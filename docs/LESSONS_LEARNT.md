@@ -491,3 +491,25 @@ generated from `preview.py`'s frame, so it can only be as up to date as the last
 screenshots`), and **every regenerated asset must be re-run after a colour or pulse change**, not
 just after a layout change. The store upload set is the same story - it depicts a version, so it has
 to be rebuilt whenever that version's look moves.
+
+**L63. Two looks were removed after seeing them on the frame: the moving glow, and the spark shower.**
+Both were built, measured and then dropped — neither is on the face now.
+
+- **The glow pulse is gone; the ring is a fixed bright baseline.** The halo rings breathed 35..120 %
+  and flared to 260 % when an arc touched a tube. Keeping that from turning the orange yellow needed
+  the whole hue-preserving cap of L61, and the user's verdict was that a glow that moves is not worth
+  any of it: `tube_colour.py` now stores the ring at the colour the pulse used to reach at its peak,
+  and `Discharge` carries no pulse state at all.
+- **The spark shower was removed as not working.** Two versions were built: 4-13 dots with halos, then
+  a 30-41 particle streak shower (one 1 px line back along each velocity + a hot head) tuned against a
+  reference GIF of hundreds of motion-blurred sparks. At 320x360 the particles read as speckle over the
+  brass rather than a fountain, and at the face's draw budget the reference's density is not reachable.
+  A live particle effect is a poor fit for a small face whose background is already a busy artwork:
+  prototype the EFFECT on the device before building the tuning machinery around it, and do not assume
+  "more particles" is the missing ingredient.
+- **A separator is the colour the digits READ as, not the colour one of their layers is.** The colon
+  was drawn in `INK_TIME` (the digits' core) and read yellow beside orange glyphs — because a thin
+  pale core inside a bright orange ring, at 3 px, reads as the RING. The dots now use `INK_GLOW1`.
+- **Measure from the frame you are measuring.** Points read off the shipping frame must be inverted
+  through the SHIPPING transform. Using `_unmap` (which inverts layout C, the older 0.95 zoom) put the
+  spark emitters and their band 5 % off — a whole tuning pass went into a geometry error.
