@@ -3,7 +3,7 @@
 import Toybox.Lang;
 
 // Tube digit centres (the drawers centre each glyph on these).
-const TIME_X = [53, 129, 191, 269];
+const TIME_X = [55, 129, 196, 269];
 const TIME_Y = 95;
 
 // The five step drums: digit centres, each window's clear interior (the belt is clipped to it),

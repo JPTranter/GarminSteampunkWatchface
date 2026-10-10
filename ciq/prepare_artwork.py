@@ -49,17 +49,16 @@ OLD_SCALE = 0.3365  # the previous uniform fit; the fonts scale by ST/OLD_SCALE 
 # the source grid, so the nudge is 2 / ST = 4.3 source px and survives any later zoom. The separator
 # (SEP_Y) is derived from TIME_Y, so it lifts with them.
 _TUBE_Y_SRC = 255.6 - 2 / ST
-# Tube 2's digit sits 3 SCREEN px right of that measurement (user: "the 2nd '0' is also too far to
-# the left"). Two of the artwork's own features agree with the eye here where the earlier automatic
-# measurements did not: the tube's internal electrode stem is centred at screen x 128-129 and its wall
-# rims bracket 97..162 (centre 129.5), against the digit's old centre of 126. The hours/minutes
-# separator is DERIVED from these two tube centres (SEP_X in geometry()), so it moves right with them -
-# which is the same "slightly too far to the left" the user reported for the dots, and keeps the
-# separator on the hour|minute boundary by construction rather than by a second hand-nudge.
-_TUBE2_X_SRC = 439.8 + 3 / ST
+# The digits are centred on the ELECTRODE STEM under each tube - the artwork feature that actually
+# marks a tube's axis - rather than on the original centre measurement, which the user could see was
+# wrong ("the 2nd '0' should center on the stem below it"). Measured on the frame as the bright cap's
+# centre just below each digit (narrow band y 149..161): tube 1 stem 55 (digit was 53), tube 2 128.8
+# (digit 129), tube 3 196-197 (digit 191), tube 4 268 (digit 269). So tubes 1 and 3 move; 2 and 4 are
+# already within a pixel. Stored on the source grid, so the nudges survive any later zoom.
+_TUBE_X_SRC = {1: 282.3 + 2 / ST, 2: 439.8 + 3 / ST, 3: 579.5 + 5 / ST, 4: 745.9}
 POINTS = {
-    "tube1": (282.3, _TUBE_Y_SRC, "top"), "tube2": (_TUBE2_X_SRC, _TUBE_Y_SRC, "top"),
-    "tube3": (579.5, _TUBE_Y_SRC, "top"), "tube4": (745.9, _TUBE_Y_SRC, "top"),
+    "tube1": (_TUBE_X_SRC[1], _TUBE_Y_SRC, "top"), "tube2": (_TUBE_X_SRC[2], _TUBE_Y_SRC, "top"),
+    "tube3": (_TUBE_X_SRC[3], _TUBE_Y_SRC, "top"), "tube4": (_TUBE_X_SRC[4], _TUBE_Y_SRC, "top"),
     "steps1": (445.8, 600.3, "bot"), "steps2": (505.2, 591.4, "bot"),
     "steps3": (561.7, 591.4, "bot"), "steps4": (618.1, 591.4, "bot"),
 }
@@ -365,6 +364,9 @@ ARC_Y_SRC = (_unmap(0, 1, "top")[1], _unmap(0, 21, "top")[1])
 # (306, 135) right, the top-15 % blue-excess centroids in each side margin - and inverted through the
 # SHIPPING transform (_src_from_screen, not _unmap, which inverts the legacy layout C).
 SPARK_POINTS = [_src_from_screen(10, 138, "top"), _src_from_screen(306, 135, "top")]
+# The hours/minutes separator's x: measured on the shipping frame as the centre of the gap between the
+# two tubes' WALLS (their rims bracket screen x 148..168), at digit height.
+SEP_POINT = _src_from_screen(160, 95, "top")
 HR_DIAL_SRC = _unmap(29, 274, "bot")              # HR dial face centre
 HR_BAND_SRC = (34 / 0.43, 42 / 0.43)              # gauge band radii, in source px
 DATE_DIAL_SRC = (810, 658)                        # date dial centre (polar-unwrap fit)
@@ -414,9 +416,13 @@ def geometry(lay=SHIP):
     g["RING_CAP"] = RING_CAP_SRC * lay.sb
     g["TOP_K"] = lay.st / 0.49          # font scale vs the layout the font sizes were tuned on
     g["BOT_K"] = lay.sb / 0.43
-    # Hours/minutes separator: the colon sits in the tube 2 / tube 3 gap (the hour|minute
-    # boundary), exactly midway between their digit centres, at digit height.
-    g["SEP_X"] = (g["TIME_X"][1] + g["TIME_X"][2]) / 2.0
+    # Hours/minutes separator: the colon sits in the tube 2 / tube 3 gap at digit height. Its x is its
+    # OWN measured point (the centre of the gap between the two tubes' walls), not the midpoint of the
+    # digit centres: the digits are placed on their stems now, and a stem-centred digit is not
+    # necessarily the geometric centre of the gap - deriving the dots from the digits would drag them
+    # off the gap every time a digit is nudged.
+    sx, _sy = lay.map(*SEP_POINT, "top")
+    g["SEP_X"] = round(sx)
     g["SEP_Y"] = g["TIME_Y"]
     g["SEP_DY"] = 7
     g["SEP_R"] = 2
