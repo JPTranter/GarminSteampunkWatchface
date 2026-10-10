@@ -110,6 +110,42 @@ GLASS_HAZE_RGB = (0.62, 0.26, 0.06)
 GLASS_SPEC_RGB = (1.0, 0.94, 0.86)
 GLASS_HAZE_AMP = 0.30           # peak of the digit's haze in the glass
 GLASS_HAZE_SIGMA = (20, 60)     # source px, x and y: tight around the digit, still taller than wide
+# ---- what the digit's glow has to read against
+# The user: "there is obviously no glow at the bottom of the digit / you haven't taken the glow size
+# into account". Measured on the frame: beside the wire the glass falls 79 -> 10 over 6 px, but BELOW
+# it the frame sits flat at L 30-48 and ABOVE it starts at 76 - because the artwork paints a bright
+# amber ELECTRODE STEM immediately under each digit and the tube's shoulder highlight just above it.
+# The glow is drawn there (bands 2 px, halo 4 px, symmetric - verified on black), it simply has no
+# dark glass to fade into. So the artwork is dimmed in a band around the digit's ink, outside it, and
+# only inside the tubes: below by GLOW_DIM_BELOW, above by GLOW_DIM_ABOVE, fading out over ~30 src px.
+GLOW_DIM_BELOW = 0.65
+GLOW_DIM_ABOVE = 0.45
+GLOW_DIM_SIGMA = 30.0            # source px
+DIGIT_INK_HALF_SRC = 79.5        # half the 74 screen px ink height, in source px
+
+
+def _dim_field(h, w):
+    """The darkening applied above and below the digits (see GLOW_DIM_*), as an (h, w) field.
+
+    Two things it has to get right, both found by measuring the result rather than the code:
+
+    - it is applied to the COMPOSITE, not to the glass inside the tube mask: the mask stops a few
+      source px below the digit, and the stem that swallows the glow sits outside it;
+    - it is limited to each tube's own columns, because a per-row field would darken the whole width
+      of the face at those rows, the manifold between the tubes included.
+    """
+    yy = np.arange(h, dtype=np.float32)[:, None]
+    xx = np.arange(w, dtype=np.float32)[None, :]
+    y0 = _TUBE_Y_SRC + DIGIT_INK_HALF_SRC          # just below the ink
+    y1 = _TUBE_Y_SRC - DIGIT_INK_HALF_SRC          # just above it
+    below = np.where(yy > y0, np.exp(-(((yy - y0) / GLOW_DIM_SIGMA) ** 2)), 0.0)
+    above = np.where(yy < y1, np.exp(-(((y1 - yy) / GLOW_DIM_SIGMA) ** 2)), 0.0)
+    cols = np.zeros((1, w), np.float32)
+    for cx in TUBE_X_SRC:
+        cols = np.maximum(cols, np.clip((TUBE_HALF_W_SRC + 6 - np.abs(xx - cx)) / 6.0, 0.0, 1.0))
+    return np.clip(1.0 - (GLOW_DIM_BELOW * below + GLOW_DIM_ABOVE * above) * cols, 0.0, 1.0)
+
+
 GLASS_HAZE_Y_SRC = _TUBE_Y_SRC  # the digit centre the haze is centred on: it follows the wire's
                                 # 2 px lift above, so the baked tint moves with the ink that lights it
 # The envelope's own CAST: a per-channel gain applied to the artwork's luminance. It replaced the AI
@@ -241,6 +277,12 @@ def glass_tubes(src):
     light = (np.clip(spec, 0, 1) * m)[..., None] * np.array(GLASS_SPEC_RGB, np.float32)
     out = 1 - (1 - np.clip(out, 0, 1)) * (1 - light)                             # screen blend
     res = a * (1 - m[..., None]) + out * m[..., None]
+    # dim just above and below each digit so the wire's glow has dark glass to fall into: the
+    # artwork's electrode stem below and shoulder highlight above otherwise swallow it whole.
+    # Applied to the COMPOSITE, not to the masked glass - the tube mask stops a few source px below
+    # the digit and the stem sits outside it (dimming only the glass changed 3,626 px above the digits
+    # and left the region below them untouched).
+    res = res * _dim_field(h, w)[..., None]
     return Image.fromarray((np.clip(res, 0, 1) * 255).round().astype(np.uint8), "RGB")
 
 

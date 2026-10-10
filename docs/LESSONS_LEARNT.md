@@ -678,3 +678,26 @@ glyphs that change every minute).
   render the frame with the element and without it (patch the mirror's draw call for one frame) and
   diff - the pixels the element changed, in the direction it fades, are the ramp the eye sees. Same
   trick as L64's eroded-core mask: the render is the instrument.
+**L71. "There is no glow at the bottom of the digit" was a CONTRAST problem in the artwork, not a missing
+glow - and the tube centres cannot be measured automatically on this artwork.** Two complaints, one
+cause: the AI-drawn artwork is not regular, and what is behind the glow decides whether it reads.
+
+- **Prove the drawn layer before changing it.** On black, every layer reaches beyond the wire equally
+  in all four directions (bands 2 px, halo 4 px). On the face, the frame beside the wire falls 79 -> 10
+  over 6 px, but BELOW it sits flat at L 30-48 and ABOVE it starts at 76: the artwork paints a bright
+  amber ELECTRODE STEM under each digit and the tube's shoulder highlight above it, so the falloff had
+  no dark glass to fade into. The fix is the artwork, not more glow: `_dim_field` darkens the composite
+  in a band around the digit's ink (below 0.65, above 0.45, sigma 30 src px), and the profile below the
+  digit goes from flat 30-48 to 60 -> 35 -> 11 -> 5, i.e. a real falloff.
+- **Two things the dim had to get right, both found by measuring the result.** It applies to the
+  COMPOSITE, not to the glass inside the tube mask - the mask stops a few source px below the digit and
+  the stem sits outside it (dimming the masked glass changed 3,626 px above the digits and left the
+  region below them untouched). And it is limited to each tube's COLUMNS, because a per-row field
+  darkens the whole width of the face at those rows, manifold included.
+- **Do not trust an automatic centre measurement on this artwork.** Three methods gave three answers
+  for the same tube: the tube tips said the digits were centred (126 vs 126), merged dark spans said
+  -2.2 px, and the strongest internal streaks said +5.8 px. The reliable instrument is a labelled ruler
+  drawn over the crop (L4's recipe): reading the tube edges off it shows the digits centred within
+  ~2 px, so the approved nudge was NOT applied - acting on the bad number would have moved a correctly
+  placed digit off centre. When measurements disagree by more than the effect, the measurement is the
+  finding, and saying so is the deliverable.
