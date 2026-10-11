@@ -1,11 +1,11 @@
 # Steampunk Nixie: a Garmin Venu Sq 2 watch face
 
-**Four glowing nixie tubes on a brass steampunk machine, with arcs that crackle between the tube
-tips every time you raise your wrist.**
+**Four glowing nixie tubes on a brass steampunk machine, with a honeycomb anode grid, a rolling
+odometer and a heart-rate zone gauge.**
 
-![Steampunk Nixie: glowing nixie tubes on a brass machine, arcs cracking between the tube tips](docs/store/hero_1440x720.png)
+![Steampunk Nixie: glowing nixie tubes on a brass machine](docs/store/hero_1440x720.png)
 
-![Arc flicker and side sparks](docs/images/discharge.gif)
+![The odometer belts rolling over](docs/images/belt_roll.gif)
 
 ![Steampunk Nixie running on a Venu Sq 2 on the wrist](docs/images/wrist-demo.gif)
 
@@ -25,9 +25,6 @@ tips every time you raise your wrist.**
   glass** envelopes lined with a honeycomb anode grid, each stroke rimmed and haloed in orange. The
   glow is steady — it does not pulse.
 - **Colon separator**: two lit dots between the hours and the minutes, in the digits' own orange.
-- **Electric arcs and side sparks**: arcs jump between the tube tips and blue-white sparks crackle
-  up the outside of the two outer tubes, for the ~10 s after a wrist raise. The animation runs only
-  while the screen is awake.
 - **Heart-rate gauge**: a band lit up to your current rate. It's cold blue below 60 bpm, turns
   green at 60, then runs yellow → orange → red through **your own zones** from Garmin Connect.
 - **Rolling step counter**: five mechanical drums whose digits sit on belts. When your count
