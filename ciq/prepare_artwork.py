@@ -363,15 +363,10 @@ def _unmap(sx, sy, band, lay=_C):
     return (sx - 160) / lay.sb + CX, (sy - lay.seam_y) / lay.sb + SEAM
 
 
-ARC_A_SRC = [_unmap(x, y, "top") for x, y in ((54, 7), (129, 7), (200, 7), (43, 7), (275, 7))]
-ARC_B_SRC = [_unmap(x, y, "top") for x, y in ((119, 7), (189, 7), (264, 7), (0, 15), (319, 15))]
-ARC_B_EDGE = [None, None, None, 0, 319]           # channels 3, 4 end ON the screen edge
-ARC_Y_SRC = (_unmap(0, 1, "top")[1], _unmap(0, 21, "top")[1])
-# Side spark emitters (the live crackle in Discharge.mc). Measured ON THE SHIPPING FRAME as the
-# bright core of the spark the artwork already bakes beside the outer tubes - (10, 138) left and
-# (306, 135) right, the top-15 % blue-excess centroids in each side margin - and inverted through the
-# SHIPPING transform (_src_from_screen, not _unmap, which inverts the legacy layout C).
-SPARK_POINTS = [_src_from_screen(10, 138, "top"), _src_from_screen(306, 135, "top")]
+# The arc channels and the side-spark emitters that used to be generated here are gone with
+# source/Discharge.mc (user request: "remove the sparks at the side and lightning above the tubes").
+# The baked artwork still carries its own painted blue sparks and the lamp glows - removal of those is
+# an ARTWORK change (an inpaint), not a code one.
 # The hours/minutes separator's x: measured on the shipping frame as the centre of the gap between the
 # two tubes' WALLS (their rims bracket screen x 148..168), at digit height.
 SEP_POINT = _src_from_screen(160, 95, "top")
@@ -405,17 +400,6 @@ def geometry(lay=SHIP):
     g["STEP_X"] = [round((a + b) / 2) for a, b in zip(dx[:-1], dx[1:])]
     g["STEP_Y"] = round((dy[0] + dy[1]) / 2)
     g["BELT_PITCH"] = round(BELT_PITCH_SRC * lay.sb)
-    ax = [lay.map(x, y, "top") for x, y in ARC_A_SRC]
-    bx = [lay.map(x, y, "top") for x, y in ARC_B_SRC]
-    g["ARC_AX"] = [round(p[0]) for p in ax]
-    g["ARC_AY"] = [round(p[1]) for p in ax]
-    g["ARC_BX"] = [e if e is not None else round(p[0]) for p, e in zip(bx, ARC_B_EDGE)]
-    g["ARC_BY"] = [round(p[1]) for p in bx]
-    g["ARC_Y_MIN"] = max(0, round(ARC_Y_SRC[0] * lay.st + lay.oy))
-    g["ARC_Y_MAX"] = round(ARC_Y_SRC[1] * lay.st + lay.oy)
-    sp = [lay.map(x, y, "top") for x, y in SPARK_POINTS]
-    g["SPARK_X"] = [round(p[0]) for p in sp]
-    g["SPARK_Y"] = [round(p[1]) for p in sp]
     hx, hy = lay.map(*HR_DIAL_SRC, "bot")
     g["HR_CENTRE"] = (hx, hy)
     g["HR_BAND"] = (HR_BAND_SRC[0] * lay.sb, HR_BAND_SRC[1] * lay.sb)
@@ -473,18 +457,6 @@ const SEP_Y = {g["SEP_Y"]};
 const SEP_DY = {g["SEP_DY"]};
 const SEP_R = {g["SEP_R"]};
 
-// Arc channels (Discharge.mc): tube-tip knobs, and the dark band the bolts must stay inside.
-const ARC_AX = {lst(g["ARC_AX"])};
-const ARC_AY = {lst(g["ARC_AY"])};
-const ARC_BX = {lst(g["ARC_BX"])};
-const ARC_BY = {lst(g["ARC_BY"])};
-const ARC_Y_MIN = {g["ARC_Y_MIN"]};
-const ARC_Y_MAX = {g["ARC_Y_MAX"]};
-
-// The side sparks' emitters: the tube-side spots the artwork's own blue spark sits on, so the live
-// crackle comes from where the painted one does.
-const SPARK_X = {lst(g["SPARK_X"])};
-const SPARK_Y = {lst(g["SPARK_Y"])};
 """)
 
 if __name__ == "__main__":

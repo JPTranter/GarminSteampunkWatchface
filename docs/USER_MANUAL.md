@@ -20,7 +20,7 @@
 | Five drums | Today's step count, up to 99,999. The digits sit on belts; when the count changes while the screen is awake, each changed digit rolls down into place. |
 | Left gauge | Your current **heart rate**. The band is lit up to your rate in seven equal steps: 40–60 bpm (cold blue), 60 bpm to your zone 1 (green, a normal resting rate), then your five zones (green → yellow → orange → red). Your zones come from Garmin Connect (*User Settings → Heart Rate Zones*). |
 | Right dial | The **day** in the centre. The **weekday** is set into the ring above it and the **month** below, one letter per segment. |
-| Arcs | For about 10 s after you raise your wrist, blue arcs crackle between the tube tips and blue-white sparks crackle up the outside of the two outer tubes. The tubes' orange glow is steady: nothing on the face pulses or flashes. |
+| Animation | None. The tubes' glow is steady, and the only moving thing is the odometer: when your step count changes while the screen is awake, the changed digits roll down into place. |
 
 When the watch is idle (always-on / low power), the face switches to a small dim time readout.
 The AMOLED would turn the screen off if the full brass artwork stayed lit.
@@ -131,7 +131,7 @@ Change a constant, look at it in a second, then put it on the watch:
 
 ```bash
 python make.py preview --hr 150          # offline render -> artwork/face_preview.png
-python make.py preview --anim 40         # the arc/glow animation -> artwork/anim_preview.gif
+python make.py preview --anim 40         # the belt-roll animation -> artwork/anim_preview.gif
 python make.py assets                    # regenerate every resource after changing a generator
 python make.py all                       # assets + build + preview + push
 python make.py screenshots               # README + store images, rendered as seen on the watch
@@ -142,7 +142,7 @@ Where things live:
 | You want to change | Edit |
 |---|---|
 | Positions, colours, fonts used | `ciq/source/SteampunkNixieView.mc` (constants at the top) |
-| Arc and glow animation | `ciq/source/Discharge.mc` (tuning constants at the top) |
+
 | Heart-rate gauge geometry/colours | `ciq/hr_gauge.py`, then `make.py assets` |
 | Date ring letters | `ciq/make_date_ring.py`, then `make.py assets` |
 | Font sizes | `ciq/make_fonts.py`, then `make.py assets` |

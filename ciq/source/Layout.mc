@@ -28,15 +28,3 @@ const SEP_Y = 95;
 const SEP_DY = 7;
 const SEP_R = 2;
 
-// Arc channels (Discharge.mc): tube-tip knobs, and the dark band the bolts must stay inside.
-const ARC_AX = [59, 131, 198, 49, 269];
-const ARC_AY = [13, 13, 13, 13, 13];
-const ARC_BX = [121, 188, 259, 0, 319];
-const ARC_BY = [13, 13, 13, 20, 20];
-const ARC_Y_MIN = 7;
-const ARC_Y_MAX = 26;
-
-// The side sparks' emitters: the tube-side spots the artwork's own blue spark sits on, so the live
-// crackle comes from where the painted one does.
-const SPARK_X = [10, 306];
-const SPARK_Y = [138, 135];

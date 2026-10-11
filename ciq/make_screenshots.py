@@ -8,7 +8,7 @@ not photos.
 Writes:
     docs/images/face.png           hero, 2x, mid-workout heart rate
     docs/images/states.png         three heart rates side by side (rest / workout / peak)
-    docs/images/discharge.gif      arc + side-spark flicker and a step-belt rollover (1x)
+    docs/images/belt_roll.gif      the odometer belts rolling over (1x)
     docs/store/screenshot_N.png    320x360 1x device-size screenshots for the store listing
     docs/store/hero.png            640x720, the face alone
     docs/store/hero_1440x720.png   1440x720 store hero banner (title + tagline + face, OFL fonts)
@@ -25,9 +25,9 @@ IMG = os.path.join(HERE, "..", "docs", "images")
 STORE = os.path.join(HERE, "..", "docs", "store")
 
 
-def seen(hr, discharge=None, scale=2):
+def seen(hr, scale=2):
     c = preview.parse_constants()
-    f = device_colour.as_seen(preview.render(consts=c, hr=hr, discharge=discharge))
+    f = device_colour.as_seen(preview.render(consts=c, hr=hr))
     return f.resize((320 * scale, 360 * scale), Image.LANCZOS) if scale != 1 else f
 
 
@@ -42,7 +42,7 @@ def save_under(img, path, max_kb):
 
 
 def hero_banner(c):
-    """1440x720 Connect IQ Store hero: the face (as seen, mid-strike) on the right, the title and
+    """1440x720 Connect IQ Store hero: the face (as seen) on the right, the title and
     a tagline on the left over a soft glow. Text uses the OFL fonts in fonts-src/ only.
 
     The glow is the tubes' own ORANGE, not the old blue: the blue came from the blue ink of the
@@ -57,10 +57,8 @@ def hero_banner(c):
     bg = np.stack([8 + 54 * glow, 10 + 24 * glow, 16 + 7 * glow], -1)
     img = Image.fromarray(bg.clip(0, 255).astype(np.uint8), "RGB")
 
-    dis = preview.Discharge(c)
-    for _ in range(9):                      # a frame with an arc striking (same seed as the watch)
-        dis.step()
-    face = device_colour.as_seen(preview.render(consts=c, hr=150, discharge=dis))
+    dis = None
+    face = device_colour.as_seen(preview.render(consts=c, hr=150))
     face = face.resize((640, 720), Image.LANCZOS)
     x0 = 760
     # feather the face's left/right edges into the background (its own surround is black, so a
@@ -121,20 +119,18 @@ if __name__ == "__main__":
     sheet.save(os.path.join(IMG, "states.png"))
 
     c = preview.parse_constants()
-    dis = preview.Discharge(c)
     frames = []
-    # arcs + glow pulse, and a step rollover (8,399 -> 8,400) a second in, so the belts roll too
+    # the odometer belts rolling over (8,399 -> 8,400) a second in. The arcs and side sparks that used
+    # to animate here were removed at the user's request, so this GIF is the last animated element.
     frm, to, phase = preview.belt_text(8399), preview.belt_text(8399), 0
     for n in range(40):
-        dis.step()
         if phase > 0:
             phase = phase + 1 if phase < c["BELT_FRAMES"] else 0
         if n == 10:
             frm, to, phase = to, preview.belt_text(8400), 1
-        f = device_colour.as_seen(preview.render(consts=c, hr=150, discharge=dis,
-                                                 belt=(frm, to, phase)))
+        f = device_colour.as_seen(preview.render(consts=c, hr=150, belt=(frm, to, phase)))
         frames.append(f.crop((0, 0, 320, 280)))
-    frames[0].save(os.path.join(IMG, "discharge.gif"), save_all=True, append_images=frames[1:],
+    frames[0].save(os.path.join(IMG, "belt_roll.gif"), save_all=True, append_images=frames[1:],
                    duration=c["FRAME_MS"], loop=0, optimize=True)
 
     hero = hero_banner(c)

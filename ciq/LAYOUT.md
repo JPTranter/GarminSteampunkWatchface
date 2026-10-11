@@ -39,7 +39,7 @@ At the user's request the split scales went to **0.4655 / 0.4085** (C × 0.95), 
 6 px below the top edge, so the tubes have room and more of both dials shows. Rather than
 re-measure, every on-screen position is now *generated* from the scales by
 source/Layout.mc`: tube digits, the five step drums and their
-windows, the HR and day numbers, the arc channels, the side sparks' emitters. The HR gauge
+windows, the HR and day numbers. The HR gauge
 (`make_date_ring.py`) and the font sizes (`make_fonts.py`) take their geometry from the same
 `geometry()`. Points measured on a screen are converted once to the 1024 grid and mapped
 forward. Check: feeding layout C back through `geometry()` reproduces every hand-measured value

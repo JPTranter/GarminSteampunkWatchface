@@ -31,6 +31,10 @@ const GLOW_RAD2 = 2;         // middle band: the reference's bloom about 1-2 px 
 
 const INK_IVORY = 0xFFF3D8;  // backlit counter and gauges
 const BELT_FRAMES = 6;       // a step digit's roll: 6 animation ticks = 0.6 s
+// The animation tick while awake (the Timer minimum is 50 ms). It used to live in Discharge.mc, which
+// the removal of the arcs and side sparks took with it - the odometer belts are the only animation
+// left, so the cadence belongs here now.
+const FRAME_MS = 100;
 const INK_SLEEP = 0x8A8A8A;  // deliberately dim for the burn-in-safe readout
 
 //! The steampunk nixie watch face.
@@ -68,11 +72,11 @@ class SteampunkNixieView extends WatchUi.WatchFace {
     private var _ringMo as Graphics.BitmapType or Null;
     private var _ringKey as Number;
 
-    // Arc flicker + glow pulse (Discharge.mc). Runs ONLY in high power: the WatchFace docs say
-    // a face "will not have access to timers or animations while in low power mode", so the
-    // timer starts on onShow/onExitSleep and stops on onEnterSleep/onHide — in practice the
-    // ~10 s after a wrist raise.
-    private var _discharge as Discharge;
+    // The animation timer drives the odometer belts only (the arcs and the side sparks were removed
+    // at the user's request, taking source/Discharge.mc with them). Runs ONLY in high power: the
+    // WatchFace docs say a face "will not have access to timers or animations while in low power
+    // mode", so the timer starts on onShow/onExitSleep and stops on onEnterSleep/onHide — in
+    // practice the ~10 s after a wrist raise.
     private var _timer as Timer.Timer or Null;
 
     function initialize() {
@@ -91,7 +95,6 @@ class SteampunkNixieView extends WatchUi.WatchFace {
         _beltTo = "";
         _beltFrom = "";
         _beltPhase = 0;
-        _discharge = new Discharge();
         _timer = null;
     }
 
@@ -181,13 +184,11 @@ class SteampunkNixieView extends WatchUi.WatchFace {
             t.stop();
             _timer = null;
         }
-        _discharge.reset();       // never leave a strike frozen on a static redraw
-        _beltPhase = 0;           // ... or a half-rolled step digit
+        _beltPhase = 0;           // never leave a half-rolled step digit on a static redraw
     }
 
-    //! Timer callback: advance the discharge one frame and redraw.
+    //! Timer callback: advance the odometer belts one frame and redraw.
     function onTick() as Void {
-        _discharge.step();
         if (_beltPhase > 0) {
             _beltPhase += 1;
             if (_beltPhase > BELT_FRAMES) {
@@ -211,9 +212,6 @@ class SteampunkNixieView extends WatchUi.WatchFace {
 
         if (_bg != null) {
             dc.drawBitmap(0, 0, _bg);
-        }
-        if (_timer != null) {
-            _discharge.draw(dc);  // in the dark band above the domes: clear of every readout
         }
         drawTime(dc);
         drawSeparator(dc);

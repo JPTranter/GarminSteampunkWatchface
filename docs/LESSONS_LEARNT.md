@@ -723,3 +723,29 @@ yellower and 0.1-0.2 more saturated on the panel - i.e. the rotation was about a
   `device_colour.correct()`, so `HUE_SHIFT_DEG = 4.0` plus `make.py assets` moves the glass, the brass,
   the wire and the separator together. Saturation (`SAT_SCALE`, still the original 0.90 estimate) is a
   SEPARATE axis and is calibrated the same way, one axis at a time.
+**L73. Removing an animated feature means removing its whole subsystem - and naming the parts that
+survive it.** "Let's remove the sparks at the side and lightning above the tubes" deleted the entire
+`Discharge` system (arcs AND the side sparks added earlier). The pieces that had to move together:
+
+- **the class and its file** (`source/Discharge.mc`, arcs + sparks + the spark state machine);
+- **its constants** - `ARC_*` and `SPARK_*` - and the geometry GENERATED from them: `ARC_AX/AY/BX/BY`,
+  `ARC_Y_MIN/MAX`, `SPARK_X/Y` in `source/Layout.mc`. The generated file keeps the stale constants on
+  disk until `make.py assets` runs again, so grep the generated output, not just the sources;
+- **the constants that lived IN the deleted file**: `FRAME_MS` was defined in `Discharge.mc` and the
+  view still used it for the odometer timer, so the build only failed AFTER the deletion
+  (`Undefined symbol ':FRAME_MS'`) - move a shared constant to its remaining owner in the same change;
+- **the preview mirror** (the `Discharge` class in `preview.py` and the `discharge=` parameter of
+  `render()`), or the offline preview keeps drawing an effect the watch no longer has;
+- **the generators that rendered it**: `make_screenshots.py`'s hero picked a "mid-strike" frame and the
+  README GIF was the arc flicker. The GIF's CONTENT changed, so it was renamed
+  (`discharge.gif` -> `belt_roll.gif`) and every reference followed - run the doc-link checker after a
+  rename, since a stale image reference is invisible in review;
+- **the prose that names it**: the README strapline ("arcs that crackle between the tube tips"), the
+  hero alt text, the features bullet, the USER_MANUAL row, the LISTING bullet, LAYOUT's list of
+  generated positions. A feature that no longer exists is the fastest-dating sentence in a doc set.
+
+**What a code removal cannot remove is what the ARTWORK paints.** The blue sparks at the tube row's
+outer edges and the lamp glows are pixels in the reference image, not drawn elements, so the face
+still shows blue there after the effect is gone. Say which parts survive and what it would take
+(an inpaint of the art, the same operation as the dead gauge pointer) rather than letting the user
+discover a leftover they asked to be rid of.
