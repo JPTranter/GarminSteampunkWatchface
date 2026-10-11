@@ -128,7 +128,8 @@ GLASS_HAZE_SIGMA = (20, 60)     # source px, x and y: tight around the digit, st
 GLOW_DIM_BELOW = 0.65
 GLOW_DIM_ABOVE = 0.45
 GLOW_DIM_SIGMA = 30.0            # source px
-DIGIT_INK_HALF_SRC = 79.5        # half the 74 screen px ink height, in source px
+DIGIT_INK_HALF_SRC = 75.5        # half the tube digit's ink height, in source px (70 px screen ink
+                                 # after the user's 5 % reduction, / ST), so the dim band follows it
 
 
 def _dim_field(h, w):

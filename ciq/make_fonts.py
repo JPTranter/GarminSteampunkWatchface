@@ -186,12 +186,17 @@ def px_for_ink(source, ink):
 # of a wire cathode, and the user reported the result "really hard to read on the device" - the
 # eroded stroke is ~3 px at 74 px ink and the panel washes it out. `thick=1` dilates if it is ever
 # wanted heavier than the typeface's own weight.
-t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
-                          condense=0.80, source=NIXIE_ONE)          # ~75 px digits, tubes
+# The tube digits' ink height, in device px, as ONE constant: the wire font, its eroded cream core and
+# the halo font are all derived from it, so the layers stay concentric and a size change is one number.
+# 75 px at the old layout scale, x TOP_K for the split-scale enlargement, x 0.95 for the user's request
+# to make the time digits 5 % smaller.
+TIME_INK = 75 * TOP_K * 0.95
+t_atlas, t_glyphs = build("NixieTime", DIGITS, px=px_for_ink(NIXIE_ONE, TIME_INK),
+                          condense=0.80, source=NIXIE_ONE)          # ~70 px digits, tubes
 # NixieTimeHot: the same glyphs eroded 1 px per side, drawn as the wire's CREAM CORE over the yellow
 # glyph (the user's zoom specifies exactly that: f8f7d4 core, f5e67d body). Erosion happens after the
 # crop, so both fonts share metrics and the core sits concentrically inside the wire.
-h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
+h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, TIME_INK),
                           condense=0.80, source=NIXIE_ONE, erode=1)
 # NixieTimeHalo: the wire's OUTER fade, drawn in the last glow colour (INK_GLOW3). Its glyphs ARE the
 # alpha ramp - full brightness at the stroke's edge, LOGARITHMICALLY down to nothing 4 px out - so the
@@ -199,7 +204,7 @@ h_atlas, h_glyphs = build("NixieTimeHot", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * 
 # exactly that: "the last colour ... alpha blend over the background for 4 pixels out to nothing",
 # then "make the alpha falloff logarithmically, not linear". The pad is 5 px so the 4 px fade and its
 # anti-aliased tail both fit inside the glyph box.
-hl_atlas, hl_glyphs = build("NixieTimeHalo", DIGITS, px=px_for_ink(NIXIE_ONE, 75 * TOP_K),
+hl_atlas, hl_glyphs = build("NixieTimeHalo", DIGITS, px=px_for_ink(NIXIE_ONE, TIME_INK),
                             condense=0.80, source=NIXIE_ONE, halo=(0.5, 4.5, 5, "log"))
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,

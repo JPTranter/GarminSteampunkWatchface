@@ -1,14 +1,14 @@
-info face="NixieTime" size=99 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=1,1 outline=0
-common lineHeight=76 base=74 scaleW=512 scaleH=74 pages=1 packed=0 alphaChnl=1 redChnl=0 greenChnl=0 blueChnl=0
+info face="NixieTime" size=94 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=1,1 outline=0
+common lineHeight=72 base=70 scaleW=512 scaleH=70 pages=1 packed=0 alphaChnl=1 redChnl=0 greenChnl=0 blueChnl=0
 page id=0 file="NixieTime_0.png"
 chars count=10
-char id=48 x=0 y=0 width=42 height=72 xoffset=0 yoffset=0 xadvance=43 page=0 chnl=15
-char id=49 x=43 y=0 width=22 height=70 xoffset=0 yoffset=0 xadvance=23 page=0 chnl=15
-char id=50 x=66 y=0 width=38 height=71 xoffset=0 yoffset=0 xadvance=39 page=0 chnl=15
-char id=51 x=105 y=0 width=39 height=72 xoffset=0 yoffset=0 xadvance=40 page=0 chnl=15
-char id=52 x=145 y=0 width=44 height=74 xoffset=0 yoffset=0 xadvance=45 page=0 chnl=15
-char id=53 x=190 y=0 width=36 height=73 xoffset=0 yoffset=0 xadvance=37 page=0 chnl=15
-char id=54 x=227 y=0 width=40 height=74 xoffset=0 yoffset=0 xadvance=41 page=0 chnl=15
-char id=55 x=268 y=0 width=38 height=70 xoffset=0 yoffset=0 xadvance=39 page=0 chnl=15
-char id=56 x=307 y=0 width=42 height=72 xoffset=0 yoffset=0 xadvance=43 page=0 chnl=15
-char id=57 x=350 y=0 width=40 height=74 xoffset=0 yoffset=0 xadvance=41 page=0 chnl=15
+char id=48 x=0 y=0 width=40 height=68 xoffset=0 yoffset=0 xadvance=41 page=0 chnl=15
+char id=49 x=41 y=0 width=22 height=66 xoffset=0 yoffset=0 xadvance=23 page=0 chnl=15
+char id=50 x=64 y=0 width=36 height=67 xoffset=0 yoffset=0 xadvance=37 page=0 chnl=15
+char id=51 x=101 y=0 width=37 height=68 xoffset=0 yoffset=0 xadvance=38 page=0 chnl=15
+char id=52 x=139 y=0 width=42 height=70 xoffset=0 yoffset=0 xadvance=43 page=0 chnl=15
+char id=53 x=182 y=0 width=34 height=69 xoffset=0 yoffset=0 xadvance=35 page=0 chnl=15
+char id=54 x=217 y=0 width=38 height=70 xoffset=0 yoffset=0 xadvance=39 page=0 chnl=15
+char id=55 x=256 y=0 width=35 height=66 xoffset=0 yoffset=0 xadvance=36 page=0 chnl=15
+char id=56 x=292 y=0 width=40 height=68 xoffset=0 yoffset=0 xadvance=41 page=0 chnl=15
+char id=57 x=333 y=0 width=38 height=70 xoffset=0 yoffset=0 xadvance=39 page=0 chnl=15
