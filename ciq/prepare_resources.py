@@ -18,10 +18,54 @@ the background loaded, because on API 4+ devices bitmaps live in the separate gr
 """
 import os
 
+import numpy as np
 from PIL import Image
 
 import device_colour
 import hr_gauge
+
+# ---- the decorative machinery recedes behind the data
+# User request: "the intricate gears and pipes in the background are visually interesting but
+# compete with the actual data; slightly dimming or blurring the background texture will help the
+# time, date and metrics stand out". Applied to the FITTED frame and BEFORE the AMOLED correction,
+# so the dimmed brass goes through the same warm-hue correction as everything else.
+# The box is the gear cluster between the two dials, under the counter; the drum digits (screen
+# y 229..267), the counter's own bottom plate (y 268..277), the dial faces, the ring letters and the
+# tubes are all outside it and untouched. Measured on the shipping frame, the machinery in this box
+# goes from mean luminance 31.6 to 19.9 (x0.63) with the counter's plate unchanged.
+# User picked the no-blur variant: dim only, so the brass keeps its edges and texture.
+GEAR_REGRESS = (86, 278, 234, 360)    # screen box (x0, y0, x1, y1)
+GEAR_DIM = 0.35                       # fraction of the region's brightness removed at its centre
+GEAR_FEATHER = 14                     # px the dim takes to fade out left, right and below
+GEAR_FEATHER_TOP = 2                  #...and above: the box's top sits in the dark seam under the
+                                      # counter, so a near-hard edge cannot show as a band
+# The two lamps in that pocket are LIGHT SOURCES, not machinery: dimming a lit bulb is wrong, so
+# each gets a hard exclusion (centre x, y, radius) with a small feather. Measured on the fitted
+# frame: the amber lamp's bulb is box (107,286,15,14) and the green one's is (197,288,13,12).
+LAMPS = ((114, 293, 15), (203, 294, 16))
+LAMP_FEATHER = 3
+
+
+def recede(img):
+    """Return `img` with the machinery behind the counter dimmed by GEAR_DIM, feathered at the edges.
+
+    The lit lamps inside the box are excluded: they are the pockets' light sources, and a bulb that
+    dims with the gears behind it reads as a dead lamp.
+    """
+    x0, y0, x1, y1 = GEAR_REGRESS
+    yy, xx = np.mgrid[0:img.height, 0:img.width].astype(np.float32)
+    dx = np.maximum(np.maximum(x0 - xx, xx - x1), 0.0)
+    dy_above = np.maximum(y0 - yy, 0.0)
+    dy_below = np.maximum(yy - y1, 0.0)
+    m = (np.clip(1.0 - dx / GEAR_FEATHER, 0.0, 1.0)
+         * np.clip(1.0 - dy_above / GEAR_FEATHER_TOP, 0.0, 1.0)
+         * np.clip(1.0 - dy_below / GEAR_FEATHER, 0.0, 1.0))
+    for lx, ly, lr in LAMPS:
+        d = np.sqrt((xx - lx) ** 2 + (yy - ly) ** 2)
+        m = m * np.clip((d - lr) / LAMP_FEATHER, 0.0, 1.0)
+    m = (m * GEAR_DIM)[..., None]
+    return Image.fromarray(np.clip(np.asarray(img, np.float32) * (1.0 - m), 0, 255)
+                           .astype(np.uint8), "RGB")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "artwork", "cand_split.png")   # written by prepare_artwork.py
@@ -29,7 +73,7 @@ DRW = os.path.join(HERE, "resources", "drawables")
 os.makedirs(DRW, exist_ok=True)
 
 if __name__ == "__main__":
-    src = Image.open(SRC).convert("RGB")
+    src = recede(Image.open(SRC).convert("RGB"))
     print("source", src.size)
 
     corrected = device_colour.correct(src)
