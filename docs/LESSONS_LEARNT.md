@@ -418,10 +418,11 @@ user's reference was *re-lighting*: keep luminance, cast it cool blue, push the 
 a clear dark interior, and add the light a real envelope shows. That means a specular streak, a
 faint opposite one, rim light on both walls, a hotspot under the dome, and a blue haze where the
 digit lights the glass. The masks are per-tube rectangles on the 1024 grid, measured on the walls,
-stopping above the collars. The time digits are now **Nixie One** (SIL OFL, `ciq/fonts-src/`):
-thin and even like wire cathodes. Licensing note for a public repo: the remaining bitmap fonts
-(Times New Roman Bold for the other numbers, Georgia for the ring letters) are rasterised Windows
-fonts. Their redistribution is a grey area and they should move to OFL fonts too.
+The time digits are now **Nixie One** (SIL OFL, `ciq/fonts-src/`):
+thin and even like wire cathodes. Licensing note for a public repo: the other numbers were
+Times New Roman Bold - a rasterised Windows font whose redistribution is a grey area. They moved to
+**Courier Prime Bold** (also OFL, `ciq/fonts-src/`) in the typography pass below, which leaves
+**Georgia for the ring letters** as the only Windows face still rasterised (see L56/L72).
 
 **L57. Rolling step belts: use the art's real geometry, clip per window, animate only awake.**
 The art has five drum windows; the face used four, so counts over 9,999 lost a digit. Each window
@@ -749,3 +750,37 @@ outer edges and the lamp glows are pixels in the reference image, not drawn elem
 still shows blue there after the effect is gone. Say which parts survive and what it would take
 (an inpaint of the art, the same operation as the dead gauge pointer) rather than letting the user
 discover a leftover they asked to be rid of.
+
+**L74. A typeface swap is sized in INK, and the rasteriser makes that non-linear - so MEASURE the
+point size.**
+- Specify every size as the **ink height the readout measured on the shipping frame** (time 70, day
+  46, steps 28, HR 35 px) and derive the point size from the face in use. Solving for it does not
+  work at these sizes: Courier Prime Bold's tallest digit measured 25 px at 44 pt and 30 px at 47 pt,
+  so a computed correction oscillates (44 -> 49 -> 44). `px_for_ink_max()` scans the candidates and
+  takes the closest, preferring the SMALLER digit on a tie - the drum window (38 px) and the 32 px
+  belt pitch were sized around 28 px of ink, and 30 px at a 32 px pitch is exactly the 2 px gap L57
+  already rejected as a fat sliver.
+- **Every size that shared the retired face moves together.** The day number, the heart-rate number
+  and the drums were all the same rasterised face, so changing only the two the user named would have
+  left one readout visibly in the old font.
+- **A swap changes the WIDTH as much as the height, and that is what a container notices.** Courier
+  Prime is monospace: at the same 52 px ink the day number measured **51 px** wide where the condensed
+  Times set it at ~46, and the user read that as "the 12 on the date is too big" even though the ink
+  height had not changed. Quote a readout's rendered ADVANCE against its container's clear width (the
+  date dial's inner disc is ~86 px; "12" went from 59 % to 48 % of it) - the ink height alone does not
+  answer "does it fit".
+- Prefer an OFL/Apache face when swapping: it retires licensing debt instead of adding to it. Keep
+  the `.ttf` and its `OFL.txt` together in `ciq/fonts-src/`, and the notes that name the retired font
+  (LAYOUT's font table, the licensing note) move in the same change.
+
+**L75. A "make the background recede" treatment has to exclude what is not background.**
+- **The box edge must not land on the element above it.** The dim box's original top edge (screen
+  y 264) clipped the counter's own bottom brass plate, which measured x0.64 of its brightness until
+  the edge moved into the dark seam below the counter (y 278, near-hard top feather): plate x1.000.
+- **A lit lamp is a light source, not machinery.** The two bulbs sit inside the dim box, and dimming
+  them with the gears behind reads as dead lamps. Each gets a measured exclusion disc (its own box on
+  the fitted frame: bulbs at (107,286,15,14) and (197,288,13,12)) - both lamps then measure x1.000
+  while the machinery around them measures x0.65.
+- **Report the treatment as measured ratios per element class** (machinery, each lamp, the counter's
+  plate, the drums, the tubes) off the SHIPPING background, not as a claim about the code: the
+  question the numbers answer is "did anything that is not background move?".
