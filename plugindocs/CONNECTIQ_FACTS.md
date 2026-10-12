@@ -742,8 +742,12 @@ a refinement. (The device definition carries no font-size table — measure at r
    glyph ABOVE the line box: the font loads fine and then draws **nothing**, with no error.
 2. **`base` = distance from the line top down to the baseline**; for glyphs sitting on the baseline,
    `base` = the tallest glyph height, `lineHeight` = that + 2.
-3. **Digit ink height is ~0.66x the point size** for a serif face, so pick the point size from the
-   target ink height (76 pt -> 53 px digits), not the other way round. `d.text(..., anchor="ls")`
+3. **Ink height is not a linear function of the point size at these sizes, so MEASURE the size
+   rather than solving for it.** A serif face ran ~0.66x (76 pt -> 53 px digits), but on the
+   rasteriser's hinted small sizes the ink jumps 2-5 px between adjacent point sizes: Courier Prime
+   Bold's tallest digit measured 25 px at 44 pt and 30 px at 47 pt, so a computed correction
+   oscillates between them (44 -> 49 -> 44). `px_for_ink_max()` scans the candidate sizes and takes
+   the closest, preferring the smaller digit on a tie. `d.text(..., anchor="ls")`
    needs the baseline y BELOW the glyph body or the glyph is clipped to slivers.
 
 Condensing horizontally (`condense=0.58`) is how the "tall and thin" look survives — a bitmap font

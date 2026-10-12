@@ -25,8 +25,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "resources", "fonts")
 os.makedirs(OUT, exist_ok=True)
 
-SERIF_BD = r"C:\Windows\Fonts\timesbd.ttf"
-SERIF = r"C:\Windows\Fonts\georgia.ttf"
+# The three readouts below the tubes (the day number, the heart-rate number and the odometer
+# drums) are set in Courier Prime Bold: a typewriter slab, which is what the user asked for in
+# place of the "quite modern" serif they were set in. It is SIL OFL, so the repo no longer
+# rasterises a Windows face for these sizes (LESSONS L56). Fonts are sized by INK height
+# (px_for_ink below), not by point size, so swapping the face keeps every readout the size the
+# layout measured - a typeface's ink/point ratio differs per face.
+DIGIT_FONT = os.path.join(HERE, "fonts-src", "courierprime_CourierPrime-Bold.ttf")
+SERIF_BD = DIGIT_FONT          # the legacy name: build()'s default source for the sub-tube sizes
 
 
 def render_glyph(ch, px, condense, source=SERIF_BD, thin=0, thick=0):
@@ -164,8 +170,8 @@ def build(name, specs, px, condense, source=SERIF_BD, tracking=1, thin=0, thick=
 
 DIGITS = [(str(i), 48 + i) for i in range(10)]
 
-# Target DIGIT heights come from the measured layout (ciq/LAYOUT.md). A serif digit's ink height is
-# ~0.66x the point size, so the point sizes below are chosen to hit those targets.
+# Target DIGIT heights come from the measured layout (ciq/LAYOUT.md): the ink height the readout
+# measured on the shipping frame, which is what a container is sized against - never the point size.
 #
 # SPLIT-SCALE LAYOUT (prepare_artwork.py): the art is now drawn at 0.49 (tubes) and 0.43 (dials,
 # counter) instead of the old uniform 0.3365, so every size is the old one times its band's factor:
@@ -180,6 +186,26 @@ def px_for_ink(source, ink):
     probe = ImageFont.truetype(source, 200)
     bb = probe.getbbox("0")
     return round(200 * ink / (bb[3] - bb[1]))
+
+
+def px_for_ink_max(source, ink):
+    """Point size whose TALLEST digit's ink is closest to `ink` px.
+
+    Nixie One's digits all stand the same height, so the "0" probe above is enough for the tube
+    font - and that one must stay untouched, because the tube digits' size was a user decision.
+    Courier Prime is neither uniform nor linear at these sizes: measured, its tallest digit is 25 px
+    at 44 pt and 30 px at 47 pt, because the rasteriser adds ~2 px of ink and rounds between sizes.
+    A scalar correction therefore oscillates (44 -> 49 -> 44), so the size is chosen by MEASURING a
+    window of candidates instead, preferring the smaller digit when two land equally close - the
+    drum window and the belt pitch were sized around the old 28 px numeral.
+    """
+    best, best_d = None, None
+    for px in range(20, 140):
+        h = max(render_glyph(ch, px, 1.0, source).height for ch, _ in DIGITS)
+        d = abs(h - ink)
+        if best_d is None or d < best_d or (d == best_d and h <= ink):
+            best, best_d = px, d
+    return best
 
 
 # NixieTime weight: NATURAL (thin=0). It shipped eroded by 1 px per side to match a reference photo
@@ -209,17 +235,30 @@ hl_atlas, hl_glyphs = build("NixieTimeHalo", DIGITS, px=px_for_ink(NIXIE_ONE, TI
 # NixieDay: the date dial's day number. The weekday and month moved out to the dial's ring
 # (make_date_ring.py), which freed the inner disc for a bigger number: 54 px ink (user-approved,
 # artwork/date_ring/_compare.png). Was NixieSmall at px 61 / 42 px ink.
+# REDUCED at the user's request ("the 12 on the date is too big"): the day number read too large for
+# the disc, and Courier Prime is monospace, so at 52 px ink its two digits measured 51 px wide where
+# the retired Times Bold set them at ~46. It now sits at 46 px ink with a tighter 0.56 condensation,
+# which measures 41 px for "12" against the disc's ~86 px inner diameter (was 59 %, now 48 %).
+# The ladder it was picked from is artwork/date_ring/_day_ladder.png.
+DAY_INK = 48.4 * BOT_K                          # 46 px at the shipping scale
+DAY_CONDENSE = 0.56
+# The three sub-tube sizes are specified by the INK height the readout measured on the shipping
+# frame (Times Bold read 52 / 34 / 28 px there; the day number has since been reduced to 46), and the
+# point size is derived from whichever face is in use - so the drums still hold a numeral that fits
+# their 38 px window after a typeface change.
+MID_INK = 35.8 * BOT_K                          # 34 px
+STEP_INK = 29.5 * BOT_K                         # 28 px
 s_atlas, s_glyphs = build("NixieDay", DIGITS + [("-", 45), (" ", 32)],
-                          px=round(78 * BOT_K), condense=0.62)                          # ~54 px, day number
+                          px=px_for_ink_max(DIGIT_FONT, DAY_INK), condense=DAY_CONDENSE)   # ~46 px
 # Two more sizes, because a bitmap font cannot be scaled at runtime and the gauges do not want the
-# 32 px drum/gauge digit the day number uses:
-#   NixieMid  - the heart-rate number, a step below NixieSmall but still a gauge-face reading.
-#   NixieStep - the odometer drums, which are only ~28 px of clear dark inside the window, so the
+# day number's size:
+#   NixieMid  - the heart-rate number, a step below the day number but still a gauge-face reading.
+#   NixieStep - the odometer drums, which are only ~28 px of clear dark inside the window, so a
 #               32 px digit overflowed onto the brass frame. Shorter is what "fits the drum" means.
 m_atlas, m_glyphs = build("NixieMid", DIGITS + [("-", 45), (" ", 32)],
-                          px=round(55 * BOT_K), condense=0.62)                          # ~37 px
+                          px=px_for_ink_max(DIGIT_FONT, MID_INK), condense=0.62)          # ~34 px
 d_atlas, d_glyphs = build("NixieStep", DIGITS + [("-", 45), (" ", 32)],
-                          px=round(43 * BOT_K), condense=0.62)                          # ~29 px
+                          px=px_for_ink_max(DIGIT_FONT, STEP_INK), condense=0.62)         # ~28 px
 # (NixieLabel - BPM / weekday / month - retired: the date moved into the dial's ring as
 # pre-rendered patches, and BPM went with the heart-rate zone gauge.)
 
