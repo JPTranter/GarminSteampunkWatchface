@@ -6,11 +6,13 @@ body / bloom colours and luminance percentiles, and the side sparks' colour, siz
 
 Measurement only - writes nothing. Run:  python ref_probe.py <image>
 """
+import os
 import sys
 
 import numpy as np
 from PIL import Image
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 HSV_W = np.array([0.2126, 0.7152, 0.0722], np.float32)
 
 
@@ -52,7 +54,8 @@ def med(px, name, extra=""):
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else r"C:/Users/jptra/AppData/Roaming/Hermes/composer-images/image_2ee11f.png"
+    refs = os.environ.get("GARMIN_REFS") or os.path.join(HERE, "refs")
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(refs, "image_2ee11f.png")
     im = Image.open(path).convert("RGB")
     a = np.asarray(im, np.float32)
     h, w = a.shape[:2]

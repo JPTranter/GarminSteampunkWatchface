@@ -74,6 +74,20 @@ Engineering notes:
 - [`SECURITY.md`](SECURITY.md): the signing key and the secret-scanning gates (gitleaks
   pre-commit and CI, the same as the sibling eClock project).
 
+### Reference images
+
+Three probes measure the user's reference renders, and the colour decisions come from their
+numbers: `ciq/ref_probe.py`, `ciq/ref_glow.py` and `ciq/amber_candidates.py`. The images are
+user-supplied and are not versioned. Put them in `ciq/refs/`, which is gitignored:
+
+```
+ciq/refs/Copilot_20261010_221001_82b632.png     # the amber glass + digits reference
+ciq/refs/image_2ee11f.png                      # the photo-real nixie reference
+```
+
+Set `GARMIN_REFS` to read them from another directory. Each script also takes the image as its
+first argument.
+
 ### How it was made
 
 The design came out of a long render loop before any watch code existed:

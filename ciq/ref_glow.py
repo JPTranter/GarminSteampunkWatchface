@@ -7,12 +7,14 @@ glow (or an extra halo ring) has to reproduce.
 
 Measurement only. Run: python ref_glow.py [image]
 """
+import os
 import sys
 
 import cv2
 import numpy as np
 from PIL import Image
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 W = np.array([0.2126, 0.7152, 0.0722], np.float32)
 BANDS = [(1, 2), (3, 4), (5, 8), (9, 14), (15, 24), (25, 40), (41, 70)]
 
@@ -29,8 +31,9 @@ def band_masks(mask, size):
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else (
-        r"C:/Users/jptra/AppData/Roaming/Hermes/composer-images/Copilot_20261010_221001_82b632.png")
+    refs = os.environ.get("GARMIN_REFS") or os.path.join(HERE, "refs")
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
+        refs, "Copilot_20261010_221001_82b632.png")
     a = np.asarray(Image.open(path).convert("RGB"), np.float32)
     h, w = a.shape[:2]
     # the tube band only: above the manifold, so the brass never contaminates the profile

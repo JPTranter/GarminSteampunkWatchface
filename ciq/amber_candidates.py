@@ -29,8 +29,10 @@ import preview
 import tube_colour
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REF = (r"C:/Users/jptra/AppData/Roaming/Hermes/composer-images/"
-       "Copilot_20261010_221001_82b632.png")
+# Reference images are user-supplied and stay out of git (see .gitignore): ciq/refs/.
+# GARMIN_REFS moves them, for a machine where they live elsewhere.
+REFS = os.environ.get("GARMIN_REFS") or os.path.join(HERE, "refs")
+REF = os.path.join(REFS, "Copilot_20261010_221001_82b632.png")
 
 # name -> (cast, gamma, interior lift)
 GLASS = [

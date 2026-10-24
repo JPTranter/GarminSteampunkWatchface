@@ -65,3 +65,8 @@ secrets.*
 # treatment was matched to it, and LESSONS L56 describes what it showed.
 ciq/artwork/glass_digits/reference_user.png
 ciq/artwork/glass_digits/_reference_glass.png
+
+# Reference images for the colour probes (ciq/ref_probe.py, ciq/ref_glow.py,
+# ciq/amber_candidates.py). User-supplied, of unknown provenance, and large: they
+# live on disk only. Set GARMIN_REFS to read them from somewhere else.
+ciq/refs/
